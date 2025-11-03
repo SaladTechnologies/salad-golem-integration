@@ -1,5 +1,5 @@
 {
-  "name": "golem-integration-orchestrator",
+  "name": "salad-golem-integration-orchestrator",
   "version": "1.0.0",
   "description": "",
   "main": "index.mjs",

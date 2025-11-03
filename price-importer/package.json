@@ -1,5 +1,5 @@
 {
-  "name": "salad-golem-integration-plan-importer",
+  "name": "salad-golem-integration-price-importer",
   "version": "1.0.0",
   "description": "",
   "main": "index.mjs",
@@ -10,9 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "config": "^4.1.1",
-    "csv-parser": "^3.2.0",
+    "node-fetch": "^3.3.2",
     "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7",
-    "timespan-parser": "^1.2.0"
+    "sqlite3": "^5.1.7"
   }
 }
