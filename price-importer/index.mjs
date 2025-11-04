@@ -1,11 +1,11 @@
 import { getGlmPrice } from './fetcher.mjs';
-import db from './db.mjs';
+import { pricesDb } from './db.mjs';
 
 // Fetch the GLM/USD price
 const glmPrice = await getGlmPrice();
 
 // Put the price into a database
-await db.exec(`
+await pricesDb.exec(`
   CREATE TABLE IF NOT EXISTS glm_price (
     id INTEGER PRIMARY KEY,
     fetched_at INTEGER DEFAULT (strftime('%s','now')),
@@ -13,7 +13,7 @@ await db.exec(`
   )
 `);
 
-await db.run(
+await pricesDb.run(
   'INSERT INTO glm_price (price_usd) VALUES (?)',
   glmPrice
 );

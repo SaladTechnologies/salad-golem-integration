@@ -1,6 +1,6 @@
 
 import { processPlans } from './monitor.mjs';
-import db from './db.mjs';
+import { plansDb } from './db.mjs';
 import { glm, shutdown } from './glm.mjs';
 
 // Handle graceful shutdown
@@ -27,7 +27,7 @@ function shutdownHandler(signal) {
   glm.disconnect();
 
   // Close DB connection
-  db.close()
+  plansDb.close()
     .then(() => {
       console.log(`Received ${signal}. Cleared interval, closed DB, and exiting.`);
       process.exit(0);

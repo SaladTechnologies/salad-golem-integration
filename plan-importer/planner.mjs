@@ -3,7 +3,7 @@ import { promises as fsp } from 'fs';
 import csv from 'csv-parser';
 import config from 'config';
 import timespan from 'timespan-parser';
-import db from './db.mjs';
+import { plansDb } from './db.mjs';
 
 // CSV column keys
 const CSV_KEYS = {
@@ -20,14 +20,14 @@ const CSV_KEYS = {
 async function importPlans() {
 
   // Ensure tables exist
-  await db.exec(`
+  await plansDb.exec(`
     CREATE TABLE IF NOT EXISTS csv_import_file (
       id INTEGER PRIMARY KEY,
       file_name TEXT UNIQUE
     )
   `);
 
-  await db.exec(`
+  await plansDb.exec(`
     CREATE TABLE IF NOT EXISTS node_plan (
       id INTEGER PRIMARY KEY,
       node_id TEXT,
@@ -40,7 +40,7 @@ async function importPlans() {
     )
   `);
 
-  await db.exec(`
+  await plansDb.exec(`
     CREATE TABLE IF NOT EXISTS node_plan_job (
       node_plan_id INTEGER,
       order_index INTEGER,
@@ -103,18 +103,18 @@ async function importPlans() {
     });
 
     if (importSuccess) {
-      await db.run('BEGIN TRANSACTION');
+      await plansDb.run('BEGIN TRANSACTION');
 
       try {
         // Insert CSV file record
-        const insertCsvFile = await db.prepare(`
+        const insertCsvFile = await plansDb.prepare(`
           INSERT INTO csv_import_file (file_name) VALUES (?)
         `);
         const csvFileResult = await insertCsvFile.run(csvFile);
         const csvFileId = csvFileResult.lastID;
 
         // Prepare plan insert statement
-        const insertPlan = await db.prepare(`
+        const insertPlan = await plansDb.prepare(`
           INSERT INTO node_plan (
             node_id,
             csv_import_file_id,
@@ -131,7 +131,7 @@ async function importPlans() {
         `);
 
         // Prepare job insert statement
-        const insertJob = await db.prepare(`
+        const insertJob = await plansDb.prepare(`
           INSERT INTO node_plan_job (
             node_plan_id,
             order_index,
@@ -193,13 +193,13 @@ async function importPlans() {
         await insertCsvFile.finalize();
         await insertPlan.finalize();
         await insertJob.finalize();
-        await db.run('COMMIT');
+        await plansDb.run('COMMIT');
         console.log(`${csvFile} successfully processed and rows inserted efficiently`);
 
         // Move file to imported/
         await fsp.rename(csvFilePath, `${importedDir}/${csvFile}`);
       } catch (err) {
-        await db.run('ROLLBACK');
+        await plansDb.run('ROLLBACK');
         console.error(`Error importing ${csvFile}:`, err);
 
         // Move file to failed/

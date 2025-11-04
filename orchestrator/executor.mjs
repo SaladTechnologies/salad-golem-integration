@@ -1,4 +1,4 @@
-import db from './db.mjs';
+import { plansDb } from './db.mjs';
 import { glm, shutdown } from './glm.mjs';
 
 /**
@@ -66,7 +66,7 @@ export async function executePlan(initialJob) {
     console.log(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
 
     // Grab the next job from the plan, if any
-    currentJob = await db.get(`
+    currentJob = await plansDb.get(`
       SELECT
         np.node_id,
         np.gpu_class_id,
@@ -86,7 +86,7 @@ export async function executePlan(initialJob) {
   } while (currentJob != null);
 
   // Mark plan as completed in database
-  await db.run(`
+  await plansDb.run(`
     UPDATE node_plan
     SET status = 'completed'
     WHERE id = $nodePlanId

@@ -1,7 +1,7 @@
 
 import config from 'config';
 import timespan from 'timespan-parser';
-import db from './db.mjs';
+import {plansDb } from './db.mjs';
 
 // Track active plans to prevent overlapping executions
 let activePlans = new Map();
@@ -18,7 +18,7 @@ export async function processPlans() {
   const adjustedNow = now - timeLag;
   const minimumDuration = timespanParser.parse(config.get('minimumDuration'));
 
-  const jobs = await db.all(`
+  const jobs = await plansDb.all(`
     SELECT
       np.node_id,
       np.gpu_class_id,
