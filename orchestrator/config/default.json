@@ -1,5 +1,7 @@
 {
   "plansDatabaseFilePath": "data/plans.db",
+  "pricesDatabaseFilePath": "data/prices.db",
+  "nodesDatabaseFilePath": "data/nodes.db",
   "minimumDuration": "5min",
   "maximumDuration": "180min",
   "timeLag": "24hr",

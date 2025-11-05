@@ -1,5 +1,5 @@
 {
-  "databaseFilePath": "../orchestrator/data/plans.db",
+  "plansDatabaseFilePath": "../orchestrator/data/plans.db",
   "minimumDuration": "5min",
   "maximumDuration": "180min"
 }

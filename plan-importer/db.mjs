@@ -4,7 +4,7 @@ import config from 'config';
 
 // Open the database once and share it
 const plansDb = await open({
-  filename: config.get('databaseFilePath'),
+  filename: config.get('plansDatabaseFilePath'),
   driver: sqlite3.Database
 });
 

@@ -35,6 +35,7 @@ async function importPlans() {
       status TEXT DEFAULT 'pending',
       start_at INTEGER,
       stop_at INTEGER,
+      usd_per_hour REAL,
       gpu_class_id TEXT,
       FOREIGN KEY (csv_import_file_id) REFERENCES csv_import_file(id)
     )
@@ -46,7 +47,6 @@ async function importPlans() {
       order_index INTEGER,
       start_at INTEGER,
       duration INTEGER,
-      invoice_amount REAL,
       FOREIGN KEY (node_plan_id) REFERENCES node_plan(id)
     )
   `);
@@ -120,8 +120,10 @@ async function importPlans() {
             csv_import_file_id,
             start_at,
             stop_at,
+            usd_per_hour,
             gpu_class_id
           ) VALUES (
+            ?,
             ?,
             ?,
             ?,
@@ -136,10 +138,8 @@ async function importPlans() {
             node_plan_id,
             order_index,
             start_at,
-            duration,
-            invoice_amount
+            duration
           ) VALUES (
-            ?,
             ?,
             ?,
             ?,
@@ -149,18 +149,22 @@ async function importPlans() {
 
         // Insert plans and jobs
         for (const row of rows) {
+          // Calculate USD per hour rate
+          const totalInvoiceAmount = row[CSV_KEYS.INVOICE_AMOUNT];
+          let totalDuration = row[CSV_KEYS.STOP_AT] - row[CSV_KEYS.START_AT];
+          const usdPerHour = (totalInvoiceAmount / totalDuration) * 3600000;
+
           // Insert plan
           const result = await insertPlan.run(
             row[CSV_KEYS.NODE_ID],
             csvFileId,
             row[CSV_KEYS.START_AT],
             row[CSV_KEYS.STOP_AT],
+            usdPerHour,
             row[CSV_KEYS.GPU_CLASS_ID]
           );
 
           // Calculate job parameters
-          const totalInvoiceAmount = row[CSV_KEYS.INVOICE_AMOUNT];
-          let totalDuration = row[CSV_KEYS.STOP_AT] - row[CSV_KEYS.START_AT];
           let remainingDuration = totalDuration;
           let orderIndex = 0;
           let jobStartAt = parseInt(row[CSV_KEYS.START_AT]);
@@ -176,8 +180,7 @@ async function importPlans() {
                 result.lastID,
                 orderIndex++,
                 jobStartAt,
-                jobDuration,
-                (jobDuration / totalDuration) * totalInvoiceAmount
+                jobDuration
               );
             }
 
