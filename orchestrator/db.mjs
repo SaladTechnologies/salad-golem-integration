@@ -5,7 +5,8 @@ import config from 'config';
 // Open the database once and share it
 const plansDb = await open({
   filename: config.get('plansDatabaseFilePath'),
-  driver: sqlite3.Database
+  driver: sqlite3.Database,
+  mode: sqlite3.OPEN_READONLY
 });
 
 // Enable WAL mode for better concurrency
@@ -14,7 +15,8 @@ await plansDb.exec('PRAGMA journal_mode = WAL;');
 // Open the database once and share it
 const pricesDb = await open({
   filename: config.get('pricesDatabaseFilePath'),
-  driver: sqlite3.Database
+  driver: sqlite3.Database,
+  mode: sqlite3.OPEN_READONLY
 });
 
 // Enable WAL mode for better concurrency
