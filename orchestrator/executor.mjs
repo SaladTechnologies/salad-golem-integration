@@ -120,7 +120,7 @@ export async function executePlan(initialJob, glmUsdPrice) {
         npj.order_index,
         npj.start_at + npj.duration - $adjustedNow AS adjusted_duration
       FROM node_plan_job npj
-      JOIN node_plan np ON np.id = npj.node_plan_id AND np.status = 'pending'
+      JOIN node_plan np ON np.id = npj.node_plan_id
       WHERE npj.node_plan_id = $nodePlanId
         AND npj.order_index = $nextOrderIndex
     `, {
@@ -129,15 +129,6 @@ export async function executePlan(initialJob, glmUsdPrice) {
     });
     // Loop until there are no more jobs in the plan
   } while (currentJob != null);
-
-  // Mark plan as completed in database
-  await plansDb.run(`
-    UPDATE node_plan
-    SET status = 'completed'
-    WHERE id = $nodePlanId
-  `, {
-    $nodePlanId: initialJob.node_plan_id
-  });
 
   console.log(`All jobs for plan_id=${initialJob.node_plan_id} completed.`);
 

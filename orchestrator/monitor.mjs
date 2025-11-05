@@ -41,7 +41,7 @@ export async function processPlans() {
       npj.order_index,
       npj.start_at + npj.duration - $adjustedNow AS adjusted_duration
     FROM node_plan_job npj
-    JOIN node_plan np ON np.id = npj.node_plan_id AND np.status = 'pending'
+    JOIN node_plan np ON np.id = npj.node_plan_id
     WHERE $adjustedNow > npj.start_at
       AND $adjustedNow < npj.start_at + npj.duration
       AND npj.start_at + npj.duration - $adjustedNow > $minimumDuration

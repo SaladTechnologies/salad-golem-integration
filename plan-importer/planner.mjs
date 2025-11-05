@@ -32,9 +32,9 @@ async function importPlans() {
       id INTEGER PRIMARY KEY,
       node_id TEXT,
       csv_import_file_id INTEGER,
-      status TEXT DEFAULT 'pending',
       start_at INTEGER,
       stop_at INTEGER,
+      invoice_amount REAL,
       usd_per_hour REAL,
       gpu_class_id TEXT,
       FOREIGN KEY (csv_import_file_id) REFERENCES csv_import_file(id)
@@ -120,9 +120,11 @@ async function importPlans() {
             csv_import_file_id,
             start_at,
             stop_at,
+            invoice_amount,
             usd_per_hour,
             gpu_class_id
           ) VALUES (
+            ?,
             ?,
             ?,
             ?,
@@ -160,6 +162,7 @@ async function importPlans() {
             csvFileId,
             row[CSV_KEYS.START_AT],
             row[CSV_KEYS.STOP_AT],
+            row[CSV_KEYS.INVOICE_AMOUNT],
             usdPerHour,
             row[CSV_KEYS.GPU_CLASS_ID]
           );
