@@ -1,5 +1,6 @@
 {
   "plansDatabaseFilePath": "../orchestrator/data/plans.db",
   "minimumDuration": "5min",
-  "maximumDuration": "180min"
+  "maximumDuration": "180min",
+  "orgWhitelist": []
 }
