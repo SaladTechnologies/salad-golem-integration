@@ -1,5 +1,5 @@
 {
-  "apiKey": "063beadd5d5d45f6a067a54ef19f098b",
+  "apiKey": "REPLACE_WITH_YOUR_COINMARKETCAP_API_KEY",
   "apiUrl": "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest",
   "databaseFilePath": "../data/prices.db"
 }
