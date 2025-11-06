@@ -1,12 +1,11 @@
-import { plansDb, nodesDb } from './db.mjs';
+import { plansDb, pricesDb, nodesDb } from './db.mjs';
 import { glm, shutdown } from './glm.mjs';
 
 /**
  * Execute a plan with an initial job.
  * @param {Object} initialJob - The initial job to execute.
- * @param {Object} glmUsdPrice - The latest GLM-USD price.
  */
-export async function executePlan(initialJob, glmUsdPrice) {
+export async function executePlan(initialJob) {
   // Retrieve the node wallet
   const nodeWallet = await nodesDb.get(`
     SELECT
@@ -54,6 +53,19 @@ export async function executePlan(initialJob, glmUsdPrice) {
   let currentJob = initialJob;
 
   do {
+    // Get the latest GLM-USD price
+    const glmPrice = await pricesDb.get(`
+      SELECT
+        price_usd
+      FROM glm_price
+      ORDER BY fetched_at DESC
+      LIMIT 1
+    `);
+
+    if (!glmPrice) {
+      throw new Error('No GLM-USD price available');
+    }
+
     // Do the work for the current job
     console.log(`Executing job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
 

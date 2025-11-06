@@ -57,9 +57,6 @@ async function importPlans() {
   const minimumDuration = timespanParser.parse(config.get('minimumDuration'));
   const maximumDuration = timespanParser.parse(config.get('maximumDuration'));
 
-  // Get organization whitelist from config
-  const orgWhitelist = config.get('orgWhitelist');
-
   // Process all CSV files in the pending directory
   const pendingDir = 'data/pending';
   const importedDir = 'data/imported';
@@ -155,12 +152,6 @@ async function importPlans() {
 
         // Insert plans and jobs
         for (const row of rows) {
-          const slug = row[CSV_KEYS.SLUG];
-          // Skip if slug does not match any whitelist prefix
-          if (orgWhitelist.length > 0 && !orgWhitelist.some(prefix => slug.startsWith(prefix))) {
-            continue;
-          }
-
           // Calculate USD per hour rate
           const totalInvoiceAmount = row[CSV_KEYS.INVOICE_AMOUNT];
           let totalDuration = row[CSV_KEYS.STOP_AT] - row[CSV_KEYS.START_AT];

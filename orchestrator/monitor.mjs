@@ -1,7 +1,7 @@
 
 import config from 'config';
 import timespan from 'timespan-parser';
-import { plansDb, pricesDb } from './db.mjs';
+import { plansDb } from './db.mjs';
 
 // Track active plans to prevent overlapping executions
 let activePlans = new Map();
@@ -10,20 +10,6 @@ let activePlans = new Map();
  * Process plans that are due to start.
  */
 export async function processPlans() {
-  // Get the latest GLM-USD price
-  const glmPrice = await pricesDb.get(`
-    SELECT
-      price_usd
-    FROM glm_price
-    ORDER BY fetched_at DESC
-    LIMIT 1
-  `);
-
-  if (!glmPrice) {
-    console.warn('No GLM-USD price available. Skipping plan processing.');
-    return;
-  }
-
   const now = Date.now();
 
   // Subtract time lag from config
@@ -62,6 +48,9 @@ export async function processPlans() {
     // Kick off the plan
     console.log(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) at ${new Date(now).toISOString()}`);
     const planPromise = executePlan(job, glmPrice)
+      .catch((err) => {
+        console.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
+      })
       .finally(() => {
         activePlans.delete(job.node_id);
       });
