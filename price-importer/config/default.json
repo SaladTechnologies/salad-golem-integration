@@ -1,5 +1,5 @@
 {
-  "databaseFilePath": "../orchestrator/data/prices.db",
   "apiKey": "063beadd5d5d45f6a067a54ef19f098b",
-  "apiUrl": "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
+  "apiUrl": "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest",
+  "databaseFilePath": "../data/prices.db"
 }

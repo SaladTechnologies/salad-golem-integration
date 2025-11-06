@@ -58,9 +58,9 @@ async function importPlans() {
   const maximumDuration = timespanParser.parse(config.get('maximumDuration'));
 
   // Process all CSV files in the pending directory
-  const pendingDir = 'data/pending';
-  const importedDir = 'data/imported';
-  const failedDir = 'data/failed';
+  const pendingDir = `${config.get('dataDirectory')}/pending`;
+  const importedDir = `${config.get('dataDirectory')}/imported`;
+  const failedDir = `${config.get('dataDirectory')}/failed`;
 
   // Ensure pending directory exists
   await fsp.mkdir(pendingDir, { recursive: true });

@@ -1,10 +1,10 @@
 {
-  "plansDatabaseFilePath": "data/plans.db",
-  "pricesDatabaseFilePath": "data/prices.db",
-  "nodesDatabaseFilePath": "data/nodes.db",
+  "apiKey": "eb9d0e5f5f144a7a8267c715af5d3300",
   "minimumDuration": "5min",
   "maximumDuration": "180min",
-  "timeLag": "24hr",
-  "apiKey": "eb9d0e5f5f144a7a8267c715af5d3300",
-  "paymentNetwork": "amoy"
+  "nodesDatabaseFilePath": "../data/nodes.db",
+  "paymentNetwork": "amoy",
+  "plansDatabaseFilePath": "../data/plans.db",
+  "pricesDatabaseFilePath": "../data/prices.db",
+  "timeLag": "24hr"
 }

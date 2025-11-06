@@ -139,14 +139,3 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
-
-# Sqlite database files
-*.db
-*.db-journal
-*.db-shm
-*.db-wal
-*.sqlite
-*.sqlite3
-
-# CSV data files
-data/**/*.csv
