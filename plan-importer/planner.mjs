@@ -7,8 +7,8 @@ import { plansDb } from './db.mjs';
 
 // CSV column keys
 const CSV_KEYS = {
-  SLUG: 'key.0',
-  NODE_ID: 'key.1',
+  ORG_NAME: 'key.0',
+  NODE_ID: 'key.2',
   START_AT: 'value.0',
   STOP_AT: 'value.1',
   INVOICE_AMOUNT: 'value.2',
@@ -31,6 +31,7 @@ async function importPlans() {
   await plansDb.exec(`
     CREATE TABLE IF NOT EXISTS node_plan (
       id INTEGER PRIMARY KEY,
+      org_name TEXT,
       node_id TEXT,
       csv_import_file_id INTEGER,
       start_at INTEGER,
@@ -117,6 +118,7 @@ async function importPlans() {
         // Prepare plan insert statement
         const insertPlan = await plansDb.prepare(`
           INSERT INTO node_plan (
+            org_name,
             node_id,
             csv_import_file_id,
             start_at,
@@ -125,6 +127,7 @@ async function importPlans() {
             usd_per_hour,
             gpu_class_id
           ) VALUES (
+            ?,
             ?,
             ?,
             ?,
@@ -159,6 +162,7 @@ async function importPlans() {
 
           // Insert plan
           const result = await insertPlan.run(
+            row[CSV_KEYS.ORG_NAME],
             row[CSV_KEYS.NODE_ID],
             csvFileId,
             row[CSV_KEYS.START_AT],
