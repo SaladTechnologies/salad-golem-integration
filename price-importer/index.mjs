@@ -19,3 +19,6 @@ await pricesDb.run(
 );
 
 console.log(`Inserted GLM price $${glmPrice} into database.`);
+
+// Close the database connection
+await pricesDb.close();

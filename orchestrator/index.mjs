@@ -1,6 +1,6 @@
 
 import { processPlans } from './monitor.mjs';
-import { plansDb } from './db.mjs';
+import { nodesDb, plansDb, pricesDb } from './db.mjs';
 import { glm, shutdown } from './glm.mjs';
 
 // Handle graceful shutdown
@@ -26,10 +26,15 @@ function shutdownHandler(signal) {
   // Disconnect from Golem Network
   glm.disconnect();
 
-  // Close DB connection
-  plansDb.close()
+  // Close DB connections
+  Promise
+    .all([
+      nodesDb.close(),
+      plansDb.close(),
+      pricesDb.close()
+    ])
     .then(() => {
-      console.log(`Received ${signal}. Cleared interval, closed DB, and exiting.`);
+      console.log(`Received ${signal}. Cleared interval, closed DBs, and exiting.`);
       process.exit(0);
     });
 }
