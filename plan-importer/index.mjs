@@ -4,15 +4,16 @@ import { importPlans } from './planner.mjs';
 import { plansDb } from './db.mjs';
 
 // Function to get the previous two day ranges
-function getPreviousTwoDayRanges(baseDate = new Date()) {
-  const pad = n => n.toString().padStart(2, '0');
+// Function to get the previous n day ranges
+function getPreviousDayRanges(n, baseDate = new Date()) {
+  const pad = x => x.toString().padStart(2, '0');
   const formatCompact = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
   const formatDashed = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-  // Calculate the two ranges:
-  // [3 days ago, 2 days ago] and [2 days ago, 1 day ago]
+  // Generate n ranges, each for a single day, ending at baseDate - 1 day
+  // e.g. for n=2 and baseDate=2025-11-07, get [2025-11-04 to 2025-11-05], [2025-11-05 to 2025-11-06]
   const result = [];
-  for (let i = 3; i >= 2; i--) {
+  for (let i = n + 1; i >= 2; i--) {
     const start = new Date(baseDate);
     start.setDate(baseDate.getDate() - i);
     const end = new Date(baseDate);
@@ -26,7 +27,8 @@ function getPreviousTwoDayRanges(baseDate = new Date()) {
   return result;
 }
 
-const ranges = getPreviousTwoDayRanges();
+// Get the previous two day ranges
+const ranges = getPreviousDayRanges(2);
 
 for (const { filename, start, end } of ranges) {
   // If the file already exists in the imported folder, skip it
@@ -46,7 +48,6 @@ for (const { filename, start, end } of ranges) {
 
   const encodedParams = new URLSearchParams();
   encodedParams.set('script', jqlQuery);
-
   encodedParams.set('params', JSON.stringify({
     from_date: start,
     to_date: end,
