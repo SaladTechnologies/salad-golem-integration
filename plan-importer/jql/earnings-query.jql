@@ -1,0 +1,28 @@
+function main() {
+  return Events(params)
+  .groupBy(
+    [
+      "properties.OrganizationName",
+      "properties.ContainerGroupSlug",
+      "properties.MachineId"
+    ],
+    [
+      mixpanel.reducer.min("time"),
+      mixpanel.reducer.max("time"),
+      mixpanel.reducer.sum("properties.InvoiceAmount"),
+      mixpanel.reducer.max("properties.WorkloadCpuLimit"),
+      mixpanel.reducer.max("properties.WorkloadMemoryLimitMb"),
+      function(accumulators, events) {
+        var result = accumulators.find(x => typeof x === 'string');
+        if (typeof result === 'string') {
+          return result;
+        }
+        result = events.find(x => x !== null && x !== undefined && typeof x.properties.WorkloadGpuClassUuid === 'string');
+        if (result === null || result === undefined) {
+          return null;
+        }
+        return result.properties.WorkloadGpuClassUuid;
+      }
+    ]
+  );
+}

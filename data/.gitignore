@@ -8,3 +8,6 @@
 
 # CSV data files
 *.csv
+
+# JSON data files
+*.json
