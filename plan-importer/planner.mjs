@@ -1,18 +1,16 @@
-import { createReadStream } from 'fs';
 import { promises as fsp } from 'fs';
-import csv from 'csv-parser';
 import config from 'config';
 import timespan from 'timespan-parser';
 import { plansDb } from './db.mjs';
 
-// CSV column keys
-const CSV_KEYS = {
-  ORG_NAME: 'key.0',
-  NODE_ID: 'key.2',
-  START_AT: 'value.0',
-  STOP_AT: 'value.1',
-  INVOICE_AMOUNT: 'value.2',
-  GPU_CLASS_ID: 'value.5'
+// JSON array keys
+const JSON_KEYS = {
+  ORG_NAME: 0,
+  NODE_ID: 2,
+  START_AT: 0,
+  STOP_AT: 1,
+  INVOICE_AMOUNT: 2,
+  GPU_CLASS_ID: 5
 }
 
 /**
@@ -22,7 +20,7 @@ async function importPlans() {
 
   // Ensure tables exist
   await plansDb.exec(`
-    CREATE TABLE IF NOT EXISTS csv_import_file (
+    CREATE TABLE IF NOT EXISTS json_import_file (
       id INTEGER PRIMARY KEY,
       file_name TEXT UNIQUE
     )
@@ -33,13 +31,13 @@ async function importPlans() {
       id INTEGER PRIMARY KEY,
       org_name TEXT,
       node_id TEXT,
-      csv_import_file_id INTEGER,
+      json_import_file_id INTEGER,
       start_at INTEGER,
       stop_at INTEGER,
       invoice_amount REAL,
       usd_per_hour REAL,
       gpu_class_id TEXT,
-      FOREIGN KEY (csv_import_file_id) REFERENCES csv_import_file(id)
+      FOREIGN KEY (json_import_file_id) REFERENCES json_import_file(id)
     )
   `);
 
@@ -58,7 +56,7 @@ async function importPlans() {
   const minimumDuration = timespanParser.parse(config.get('minimumDuration'));
   const maximumDuration = timespanParser.parse(config.get('maximumDuration'));
 
-  // Process all CSV files in the pending directory
+  // Process all JSON files in the pending directory
   const pendingDir = `${config.get('dataDirectory')}/pending`;
   const importedDir = `${config.get('dataDirectory')}/imported`;
   const failedDir = `${config.get('dataDirectory')}/failed`;
@@ -72,55 +70,47 @@ async function importPlans() {
   // Ensure failed directory exists
   await fsp.mkdir(failedDir, { recursive: true });
 
-  // Read CSV files
-  const files = (await fsp.readdir(pendingDir)).filter(f => f.endsWith('.csv'));
-  console.log(`Found ${files.length} CSV files to process.`);
+  // Read JSON files
+  const files = (await fsp.readdir(pendingDir)).filter(f => f.endsWith('.json'));
+  console.log(`Found ${files.length} JSON files to process.`);
 
-  // Process each CSV file
-  for (const csvFile of files) {
-    console.log(`Processing file: ${csvFile}`);
-
-    const csvFilePath = `${pendingDir}/${csvFile}`;
-    const rows = [];
+  // Process each JSON file
+  for (const jsonFile of files) {
+    console.log(`Processing file: ${jsonFile}`);
+    const jsonFilePath = `${pendingDir}/${jsonFile}`;
     let importSuccess = true;
 
-    // Read CSV and collect rows
-    await new Promise((resolve, reject) => {
-      createReadStream(csvFilePath)
-        .pipe(csv())
-        .on('data', (row) => {
-          const totalDuration = row[CSV_KEYS.STOP_AT] - row[CSV_KEYS.START_AT];
-          if (totalDuration >= minimumDuration) {
-            rows.push(row);
-          }
-        })
-        .on('end', resolve)
-        .on('error', (err) => {
-          importSuccess = false;
-          reject(err);
-        });
-    }).catch((err) => {
-      console.error(`Failed to read ${csvFile}:`, err);
+    // Open the JSON file and parse its content
+    const fileContent = await fsp.readFile(jsonFilePath, 'utf-8');
+    let jsonData;
+    try {
+      jsonData = JSON.parse(fileContent);
+    } catch (err) {
+      console.error(`Failed to parse JSON in ${jsonFile}:`, err);
       importSuccess = false;
-    });
+
+      // Move file to failed/
+      await fsp.rename(jsonFilePath, `${failedDir}/${jsonFile}`);
+      continue;
+    }
 
     if (importSuccess) {
       await plansDb.run('BEGIN TRANSACTION');
 
       try {
-        // Insert CSV file record
-        const insertCsvFile = await plansDb.prepare(`
-          INSERT INTO csv_import_file (file_name) VALUES (?)
+        // Insert JSON file record
+        const insertJsonFile = await plansDb.prepare(`
+          INSERT INTO json_import_file (file_name) VALUES (?)
         `);
-        const csvFileResult = await insertCsvFile.run(csvFile);
-        const csvFileId = csvFileResult.lastID;
+        const jsonFileResult = await insertJsonFile.run(jsonFile);
+        const jsonFileId = jsonFileResult.lastID;
 
         // Prepare plan insert statement
         const insertPlan = await plansDb.prepare(`
           INSERT INTO node_plan (
             org_name,
             node_id,
-            csv_import_file_id,
+            json_import_file_id,
             start_at,
             stop_at,
             invoice_amount,
@@ -154,28 +144,33 @@ async function importPlans() {
         `);
 
         // Insert plans and jobs
-        for (const row of rows) {
+        for (const row of jsonData) {
+          // If less than minimum duration, skip
+          if ((row.value[JSON_KEYS.STOP_AT] - row.value[JSON_KEYS.START_AT]) < minimumDuration) {
+            continue;
+          }
+
           // Calculate USD per hour rate
-          const totalInvoiceAmount = row[CSV_KEYS.INVOICE_AMOUNT];
-          let totalDuration = row[CSV_KEYS.STOP_AT] - row[CSV_KEYS.START_AT];
+          const totalInvoiceAmount = row.value[JSON_KEYS.INVOICE_AMOUNT];
+          let totalDuration = row.value[JSON_KEYS.STOP_AT] - row.value[JSON_KEYS.START_AT];
           const usdPerHour = (totalInvoiceAmount / totalDuration) * 3600000;
 
           // Insert plan
           const result = await insertPlan.run(
-            row[CSV_KEYS.ORG_NAME],
-            row[CSV_KEYS.NODE_ID],
-            csvFileId,
-            row[CSV_KEYS.START_AT],
-            row[CSV_KEYS.STOP_AT],
-            row[CSV_KEYS.INVOICE_AMOUNT],
+            row.key[JSON_KEYS.ORG_NAME],
+            row.key[JSON_KEYS.NODE_ID],
+            jsonFileId,
+            row.value[JSON_KEYS.START_AT],
+            row.value[JSON_KEYS.STOP_AT],
+            row.value[JSON_KEYS.INVOICE_AMOUNT],
             usdPerHour,
-            row[CSV_KEYS.GPU_CLASS_ID]
+            row.value[JSON_KEYS.GPU_CLASS_ID]
           );
 
           // Calculate job parameters
           let remainingDuration = totalDuration;
           let orderIndex = 0;
-          let jobStartAt = parseInt(row[CSV_KEYS.START_AT]);
+          let jobStartAt = parseInt(row.value[JSON_KEYS.START_AT]);
 
           // Split into jobs based on maximumDuration
           do {
@@ -201,24 +196,23 @@ async function importPlans() {
         }
 
         // Finalize statements and commit transaction
-        await insertCsvFile.finalize();
+        await insertJsonFile.finalize();
         await insertPlan.finalize();
         await insertJob.finalize();
         await plansDb.run('COMMIT');
-        console.log(`${csvFile} successfully processed and rows inserted efficiently`);
-
+        console.log(`${jsonFile} successfully processed and rows inserted efficiently`);
         // Move file to imported/
-        await fsp.rename(csvFilePath, `${importedDir}/${csvFile}`);
+        await fsp.rename(jsonFilePath, `${importedDir}/${jsonFile}`);
       } catch (err) {
         await plansDb.run('ROLLBACK');
-        console.error(`Error importing ${csvFile}:`, err);
+        console.error(`Error importing ${jsonFile}:`, err);
 
         // Move file to failed/
-        await fsp.rename(csvFilePath, `${failedDir}/${csvFile}`);
+        await fsp.rename(jsonFilePath, `${failedDir}/${jsonFile}`);
       }
     } else {
       // Move file to failed/
-      await fsp.rename(csvFilePath, `${failedDir}/${csvFile}`);
+      await fsp.rename(jsonFilePath, `${failedDir}/${jsonFile}`);
     }
   }
 }
