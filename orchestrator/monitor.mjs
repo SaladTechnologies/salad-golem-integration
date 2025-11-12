@@ -2,6 +2,7 @@
 import config from 'config';
 import timespan from 'timespan-parser';
 import { plansDb } from './db.mjs';
+import { getGpuClasses } from './matrix.mjs';
 
 // Track active plans to prevent overlapping executions
 let activePlans = new Map();
@@ -38,6 +39,15 @@ export async function processPlans() {
 
   console.log(`Processing ${jobs.length} due jobs at ${new Date(now).toISOString()}`);
 
+  // Skip if no jobs
+  if (jobs.length === 0) {
+    return;
+  }
+
+  // Fetch GPU classes from Matrix
+  const gpuClasses = await getGpuClasses();
+  const gpuClassMap = new Map(gpuClasses.map(gc => [gc.id, gc]));
+
   for (const job of jobs) {
     // Skip if already processing
     if (activePlans.has(job.node_id)) {
@@ -47,7 +57,7 @@ export async function processPlans() {
 
     // Kick off the plan
     console.log(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) at ${new Date(now).toISOString()}`);
-    const planPromise = executePlan(job, glmPrice)
+    const planPromise = executePlan(job, gpuClassMap)
       .catch((err) => {
         console.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
       })

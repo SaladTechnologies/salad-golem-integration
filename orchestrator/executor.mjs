@@ -1,11 +1,45 @@
 import { plansDb, pricesDb, nodesDb } from './db.mjs';
 import { glm, shutdown } from './glm.mjs';
+import { getNodeState } from './matrix.mjs';
 
 /**
  * Execute a plan with an initial job.
  * @param {Object} initialJob - The initial job to execute.
+ * @param {Map} gpuClassesMap - Map of GPU class IDs to GPU class details.
  */
-export async function executePlan(initialJob) {
+export async function executePlan(initialJob, gpuClassesMap) {
+  // Get node state from Matrix
+  const nodeState = await getNodeState(initialJob.node_id);
+  if (!nodeState) {
+    throw new Error(`Node state not found for node_id=${initialJob.node_id}`);
+  }
+
+  if (initialJob.gpu_class_id != '' && initialJob.gpu_class_id != null)
+    {
+    // Find the GPU that matches the plan's GPU class ID
+    const gpuClass = gpuClassesMap.get(initialJob.gpu_class_id);
+    if (!gpuClass) {
+      throw new Error(`GPU class not found for gpu_class_id=${initialJob.gpu_class_id}`);
+    }
+
+    // Find a GPU on the node that matches the GPU class filters
+    let matchingGpu = null;
+    for (const [key, value] of Object.entries(nodeState.gpuZ)) {
+      // Check if the GPU name matches the GPU class regexp
+      if (new RegExp(gpuClass.filters.gpuCardNameInclude).test(value.PROP_CARD_NAME)) {
+        console.log(`Node ${initialJob.node_id} GPU ${value.name} matches GPU class regexp ${gpuClass.name_regexp}`);
+        matchingGpu = value;
+        break;
+      }
+    }
+
+    if (!matchingGpu) {
+      throw new Error(`No matching GPU found on node_id=${initialJob.node_id} for gpu_class_id=${initialJob.gpu_class_id}`);
+    }
+
+    console.log(`Node ${initialJob.node_id} has matching GPU: ${matchingGpu.name} (${matchingGpu.id})`);
+  }
+
   // Retrieve the node wallet
   const nodeWallet = await nodesDb.get(`
     SELECT
@@ -47,7 +81,7 @@ export async function executePlan(initialJob) {
     };
   }
 
-  // TODO: Allocate resources as needed
+  // TODO: Provision provider with K8s cluster
 
   // Simulate job execution
   let currentJob = initialJob;
@@ -144,5 +178,5 @@ export async function executePlan(initialJob) {
 
   console.log(`All jobs for plan_id=${initialJob.node_plan_id} completed.`);
 
-  // TODO: Shutdown resources as needed
+  // TODO: Deprovision provider with K8s cluster
 }
