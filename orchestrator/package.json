@@ -2,8 +2,10 @@
   "name": "salad-golem-integration-orchestrator",
   "version": "1.0.0",
   "description": "",
-  "main": "index.mjs",
+  "main": "dist/index.js",
   "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -13,9 +15,16 @@
     "@golem-sdk/pino-logger": "^1.1.0",
     "@kubernetes/client-node": "^1.4.0",
     "config": "^4.1.1",
-    "ethers": "^6.15.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "timespan-parser": "^1.2.0"
+  },
+  "devDependencies": {
+    "@types/config": "^3.3.5",
+    "@types/node": "^24.10.1",
+    "@types/node-fetch": "^2.6.13",
+    "@types/timespan-parser": "^1.2.3",
+    "ethers": "^6.15.0",
+    "typescript": "^5.9.3"
   }
 }
