@@ -19,8 +19,16 @@ export async function processPlans(): Promise<void> {
 	const adjustedNow = now - timeLag;
 	const minimumDuration = timespanParser.parse(config.get('minimumDuration'));
 
-	const jobs = await plansDb.all<any[]>(
-		`SELECT np.node_id, np.usd_per_hour, np.gpu_class_id, npj.node_plan_id, npj.order_index, npj.start_at + npj.duration - $adjustedNow AS adjusted_duration, npj.duration
+	const jobs = await plansDb.all<any[]>(`
+    SELECT
+      np.node_id,
+      np.org_name,
+      np.usd_per_hour,
+      np.gpu_class_id,
+      npj.node_plan_id,
+      npj.order_index,
+      npj.start_at + npj.duration - $adjustedNow AS adjusted_duration,
+      npj.duration
 		FROM node_plan_job npj
 		JOIN node_plan np ON np.id = npj.node_plan_id
 		WHERE $adjustedNow > npj.start_at

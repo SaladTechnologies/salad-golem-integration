@@ -39,7 +39,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 		   for (const [key, value] of Object.entries(nodeState.gpuZ)) {
 			   const gpu = value as GpuInfo;
 			   if (new RegExp(gpuClass.filters.gpuCardNameInclude).test(gpu.PROP_CARD_NAME)) {
-				   console.log(`Node ${initialJob.node_id} GPU ${gpu.name ?? ''} matches GPU class regexp ${gpuClass.name_regexp}`);
+				   console.log(`Node ${initialJob.node_id} GPU ${gpu.PROP_CARD_NAME ?? ''} matches GPU class regexp ${gpuClass.name_regexp}`);
 				   matchingGpu = gpu;
 				   break;
 			   }
@@ -49,7 +49,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 			   throw new Error(`No matching GPU found on node_id=${initialJob.node_id} for gpu_class_id=${initialJob.gpu_class_id}`);
 		   }
 
-		   console.log(`Node ${initialJob.node_id} has matching GPU: ${matchingGpu.name ?? ''} (${matchingGpu.id ?? ''})`);
+		   console.log(`Node ${initialJob.node_id} has matching GPU: ${matchingGpu.PROP_CARD_NAME ?? ''}`);
 	}
 
 	// Retrieve the node wallet
@@ -123,7 +123,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 						},
 					},
 					market: {
-						rentHours: currentJob.adjusted_duration / (1000 * 60 * 60),
+						rentHours: Math.round((currentJob.adjusted_duration / (1000 * 60 * 60)) * 100) / 100,
 						pricing: {
 							model: "linear",
 							maxStartPrice: 0.0,
@@ -136,7 +136,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 				signalOrTimeout: shutdown.signal,
 			});
 
-			const exe = await rental.getExeUnit(currentJob.adjusted_duration * 1.01);
+			const exe = await rental.getExeUnit(Math.round(currentJob.adjusted_duration * 1.01));
 			const remoteProcess = await exe.runAndStream(
 				currentJob.node_id,
 				[JSON.stringify({ duration: currentJob.duration / 1000 })],
