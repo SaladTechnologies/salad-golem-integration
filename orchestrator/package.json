@@ -11,6 +11,7 @@
   "dependencies": {
     "@golem-sdk/golem-js": "^3.9.0",
     "@golem-sdk/pino-logger": "^1.1.0",
+    "@kubernetes/client-node": "^1.4.0",
     "config": "^4.1.1",
     "ethers": "^6.15.0",
     "sqlite": "^5.1.1",

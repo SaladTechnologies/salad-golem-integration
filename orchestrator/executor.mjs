@@ -1,3 +1,4 @@
+import { OfferProposalFilterFactory } from '@golem-sdk/golem-js';
 import { plansDb, pricesDb, nodesDb } from './db.mjs';
 import { glm, shutdown } from './glm.mjs';
 import { getNodeState } from './matrix.mjs';
@@ -86,6 +87,9 @@ export async function executePlan(initialJob, gpuClassesMap) {
   // Simulate job execution
   let currentJob = initialJob;
 
+  // Prepare whitelist of provider IDs (node wallet address)
+  const whitelistProviderIds = [nodeWallet.wallet_address];
+
   do {
     // Get the latest GLM-USD price
     const glmPrice = await pricesDb.get(`
@@ -124,16 +128,17 @@ export async function executePlan(initialJob, gpuClassesMap) {
               model: "linear",
               maxStartPrice: 0.0,
               maxCpuPerHourPrice: 0.0,
-              maxEnvPerHourPrice: glmEnvPerHourPrice,
+              maxEnvPerHourPrice: glmEnvPerHourPrice * 1.002, // Small buffer to ensure we get accepted
             },
-            // TODO: Apply whitelist filter
+            // Filter to only allow whitelisted providers
+            offerProposalFilter: OfferProposalFilterFactory.allowProvidersById(whitelistProviderIds)
           },
         },
         // Pass abort signal to the rental
         signalOrTimeout: shutdown.signal,
       });
 
-      const exe = await rental.getExeUnit();
+      const exe = await rental.getExeUnit(currentJob.adjusted_duration * 1.01); // Small buffer for execution timeout
       const remoteProcess = await exe.runAndStream(
         currentJob.node_id,
         [JSON.stringify({ duration: currentJob.duration / 1000 })], // Run for the job's duration
