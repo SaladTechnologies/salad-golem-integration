@@ -15,6 +15,7 @@
     "@golem-sdk/pino-logger": "^1.1.0",
     "@kubernetes/client-node": "^1.4.0",
     "config": "^4.1.1",
+    "pino": "^10.1.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
     "timespan-parser": "^1.2.0"
@@ -23,6 +24,7 @@
     "@types/config": "^3.3.5",
     "@types/node": "^24.10.1",
     "@types/node-fetch": "^2.6.13",
+    "@types/pino": "^7.0.4",
     "@types/timespan-parser": "^1.2.3",
     "ethers": "^6.15.0",
     "typescript": "^5.9.3"

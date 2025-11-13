@@ -16,24 +16,24 @@ await processPlans();
 let runnerInterval = setInterval(processPlans, 1000 * 60);
 
 function shutdownHandler(signal: string) {
-	// Clear interval
-	clearInterval(runnerInterval);
+  // Clear interval
+  clearInterval(runnerInterval);
 
-	// Abort any ongoing Golem operations
-	shutdown.abort();
+  // Abort any ongoing Golem operations
+  shutdown.abort();
 
-	// Disconnect from Golem Network
-	glm.disconnect();
+  // Disconnect from Golem Network
+  glm.disconnect();
 
-	// Close DB connections
-	Promise
-		.all([
-			nodesDb.close(),
-			plansDb.close(),
-			pricesDb.close()
-		])
-		.then(() => {
-			console.log(`Received ${signal}. Cleared interval, closed DBs, and exiting.`);
-			process.exit(0);
-		});
+  // Close DB connections
+  Promise
+    .all([
+      nodesDb.close(),
+      plansDb.close(),
+      pricesDb.close()
+    ])
+    .then(() => {
+      console.log(`Received ${signal}. Cleared interval, closed DBs, and exiting.`);
+      process.exit(0);
+    });
 }

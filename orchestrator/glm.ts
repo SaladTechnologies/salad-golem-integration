@@ -4,13 +4,13 @@ import config from "config";
 
 // Initialize Golem Network client
 export const glm = new GolemNetwork({
-	logger: pinoPrettyLogger({ level: "debug" }),
-	api: {
-		key: config.get<string>("apiKey")
-	},
-	payment: {
-		network: config.get<string>("paymentNetwork")
-	}
+  logger: pinoPrettyLogger({ level: "debug" }),
+  api: {
+    key: config.get<string>("apiKey")
+  },
+  payment: {
+    network: config.get<string>("paymentNetwork")
+  }
 });
 
 // Create AbortController for cancellation
