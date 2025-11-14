@@ -1,6 +1,7 @@
 import { processPlans } from './monitor.js';
 import { nodesDb, plansDb, pricesDb } from './db.js';
 import { glm, shutdown } from './glm.js';
+import { logger } from './logger.js';
 
 // Handle graceful shutdown
 process.on('SIGINT', () => shutdownHandler('SIGINT'));
@@ -34,6 +35,6 @@ async function shutdownHandler(signal: string) {
     pricesDb.close()
   ]);
 
-  console.log(`Received ${signal}. Cleared interval, closed DBs, and exiting.`);
+  logger.info(`Received ${signal}. Cleared interval, closed DBs, and exiting.`);
   process.exit(0);
 }

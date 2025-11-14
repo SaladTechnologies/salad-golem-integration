@@ -40,7 +40,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
        for (const [key, value] of Object.entries(nodeState.gpuZ)) {
          const gpu = value as GpuInfo;
          if (new RegExp(gpuClass.filters.gpuCardNameInclude).test(gpu.PROP_CARD_NAME)) {
-           console.log(`Node ${initialJob.node_id} GPU ${gpu.PROP_CARD_NAME ?? ''} matches GPU class regexp ${gpuClass.name_regexp}`);
+           logger.info(`Node ${initialJob.node_id} GPU ${gpu.PROP_CARD_NAME ?? ''} matches GPU class regexp ${gpuClass.name_regexp}`);
            matchingGpu = gpu;
            break;
          }
@@ -50,7 +50,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
          throw new Error(`No matching GPU found on node_id=${initialJob.node_id} for gpu_class_id=${initialJob.gpu_class_id}`);
        }
 
-       console.log(`Node ${initialJob.node_id} has matching GPU: ${matchingGpu.PROP_CARD_NAME ?? ''}`);
+       logger.info(`Node ${initialJob.node_id} has matching GPU: ${matchingGpu.PROP_CARD_NAME ?? ''}`);
   }
 
   // Retrieve the node wallet
@@ -66,7 +66,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
   if (!nodeWallet) {
        // Create a new wallet for the node
        const wallet = ethers.Wallet.createRandom();
-       console.log(`Creating new wallet for node_id=${initialJob.node_id} with address=${wallet.address}`);
+       logger.info(`Creating new wallet for node_id=${initialJob.node_id} with address=${wallet.address}`);
 
        // Insert node wallet into database
        const mnemonicPhrase = wallet.mnemonic?.phrase ?? '';
@@ -78,7 +78,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
            $walletMnemonic: mnemonicPhrase
          }
        );
-       console.log(`Inserted new node with node_id=${initialJob.node_id}`);
+       logger.info(`Inserted new node with node_id=${initialJob.node_id}`);
 
        nodeWallet = {
          wallet_address: wallet.address,
@@ -105,7 +105,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     }
 
     // Do the work for the current job
-    console.log(`Executing job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
+    logger.info(`Executing job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
 
     // Integrate with Golem Network to run the job
     let rental: any;
@@ -155,7 +155,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       if (rental) await rental.stopAndFinalize();
     }
 
-    console.log(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
+    logger.info(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
 
        // Grab the next job from the plan, if any
        const nextJob = await plansDb.get<Job>(
@@ -173,7 +173,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     // Loop until there are no more jobs in the plan
   } while (currentJob != null);
 
-  console.log(`All jobs for plan_id=${initialJob.node_plan_id} completed.`);
+  logger.info(`All jobs for plan_id=${initialJob.node_plan_id} completed.`);
 
   // TODO: Deprovision provider with K8s cluster
 }

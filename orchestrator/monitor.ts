@@ -58,27 +58,27 @@ export async function processPlans(): Promise<void> {
   for (const job of jobs) {
     // Skip if already processing
     if (activePlans.has(job.node_id)) {
-      console.log(`Plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) is already active. Skipping.`);
+      logger.debug(`Plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) is already active. Skipping.`);
       continue;
     }
 
     // Check organization whitelist
     if (organizationWhitelist.length > 0 && !organizationWhitelist.includes(job.org_name)) {
-      logger.info(`Organization ${job.org_name} is not in the whitelist. Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
+      logger.debug(`Organization ${job.org_name} is not in the whitelist. Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
       continue;
     }
 
     // Enforce max concurrent jobs
     if (maxConcurrentJobs > 0 && activePlans.size >= maxConcurrentJobs) {
-      console.log(`Maximum concurrent jobs reached (${maxConcurrentJobs}). Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
+      logger.info(`Maximum concurrent jobs reached (${maxConcurrentJobs}). Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
       continue;
     }
 
     // Kick off the plan
-    console.log(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) at ${new Date(now).toISOString()}`);
+    logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) at ${new Date(now).toISOString()}`);
     const planPromise = executePlan(job, gpuClassMap)
       .catch((err: any) => {
-        console.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
+        logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
       })
       .finally(() => {
         activePlans.delete(job.node_id);
