@@ -1,10 +1,10 @@
-import { open } from 'sqlite';
+import { open, Database } from 'sqlite';
 import sqlite3 from 'sqlite3';
 import config from 'config';
 
 // Open the database once and share it
-const plansDb = await open({
-  filename: config.get('plansDatabaseFilePath'),
+export const plansDb: Database = await open({
+  filename: config.get<string>('plansDatabaseFilePath'),
   driver: sqlite3.Database,
   mode: sqlite3.OPEN_READONLY
 });
@@ -12,23 +12,19 @@ const plansDb = await open({
 // Enable WAL mode for better concurrency
 await plansDb.exec('PRAGMA journal_mode = WAL;');
 
-// Open the database once and share it
-const pricesDb = await open({
-  filename: config.get('pricesDatabaseFilePath'),
+export const pricesDb: Database = await open({
+  filename: config.get<string>('pricesDatabaseFilePath'),
   driver: sqlite3.Database,
   mode: sqlite3.OPEN_READONLY
 });
 
-// Enable WAL mode for better concurrency
 await pricesDb.exec('PRAGMA journal_mode = WAL;');
 
-// Open the database once and share it
-const nodesDb = await open({
-  filename: config.get('nodesDatabaseFilePath'),
+export const nodesDb: Database = await open({
+  filename: config.get<string>('nodesDatabaseFilePath'),
   driver: sqlite3.Database
 });
 
-// Enable WAL mode for better concurrency
 await nodesDb.exec('PRAGMA journal_mode = WAL;');
 
 // Ensure node_wallets table exists
@@ -39,5 +35,3 @@ await nodesDb.exec(`
     wallet_mnemonic TEXT
   )
 `);
-
-export { plansDb, pricesDb, nodesDb };

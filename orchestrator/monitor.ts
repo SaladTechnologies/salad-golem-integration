@@ -1,16 +1,17 @@
-
 import config from 'config';
 import timespan from 'timespan-parser';
-import { plansDb } from './db.mjs';
-import { getGpuClasses } from './matrix.mjs';
+import { logger } from './logger.js';
+import { plansDb } from './db.js';
+import { getGpuClasses } from './matrix.js';
+import { executePlan } from './executor.js';
 
 // Track active plans to prevent overlapping executions
-let activePlans = new Map();
+let activePlans = new Map<string, Promise<void>>();
 
 /**
  * Process plans that are due to start.
  */
-export async function processPlans() {
+export async function processPlans(): Promise<void> {
   const now = Date.now();
 
   // Subtract time lag from config
@@ -19,25 +20,28 @@ export async function processPlans() {
   const adjustedNow = now - timeLag;
   const minimumDuration = timespanParser.parse(config.get('minimumDuration'));
 
-  const jobs = await plansDb.all(`
+  const jobs = await plansDb.all<any[]>(`
     SELECT
       np.node_id,
+      np.org_name,
       np.usd_per_hour,
       np.gpu_class_id,
       npj.node_plan_id,
       npj.order_index,
-      npj.start_at + npj.duration - $adjustedNow AS adjusted_duration
+      npj.start_at + npj.duration - $adjustedNow AS adjusted_duration,
+      npj.duration
     FROM node_plan_job npj
     JOIN node_plan np ON np.id = npj.node_plan_id
     WHERE $adjustedNow > npj.start_at
       AND $adjustedNow < npj.start_at + npj.duration
-      AND npj.start_at + npj.duration - $adjustedNow > $minimumDuration
-  `, {
-    $adjustedNow: adjustedNow,
-    $minimumDuration: minimumDuration,
-  });
+      AND npj.start_at + npj.duration - $adjustedNow > $minimumDuration`,
+    {
+      $adjustedNow: adjustedNow,
+      $minimumDuration: minimumDuration,
+    }
+  );
 
-  console.log(`Processing ${jobs.length} due jobs at ${new Date(now).toISOString()}`);
+  logger.info(`Processing ${jobs.length} due jobs at ${new Date(now).toISOString()}`);
 
   // Skip if no jobs
   if (jobs.length === 0) {
@@ -46,10 +50,10 @@ export async function processPlans() {
 
   // Fetch GPU classes from Matrix
   const gpuClasses = await getGpuClasses();
-  const gpuClassMap = new Map(gpuClasses.map(gc => [gc.uuid, gc]));
+  const gpuClassMap = new Map(gpuClasses.map((gc: any) => [gc.uuid, gc]));
 
-  const maxConcurrentJobs = config.get('maxConcurrentJobs');
-  const organizationWhitelist = config.get('organizationWhitelist');
+  const maxConcurrentJobs = config.get<number>('maxConcurrentJobs');
+  const organizationWhitelist = config.get<string[]>('organizationWhitelist');
 
   for (const job of jobs) {
     // Skip if already processing
@@ -60,7 +64,7 @@ export async function processPlans() {
 
     // Check organization whitelist
     if (organizationWhitelist.length > 0 && !organizationWhitelist.includes(job.org_name)) {
-      console.log(`Organization ${job.org_name} is not in the whitelist. Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
+      logger.info(`Organization ${job.org_name} is not in the whitelist. Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
       continue;
     }
 
@@ -73,7 +77,7 @@ export async function processPlans() {
     // Kick off the plan
     console.log(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) at ${new Date(now).toISOString()}`);
     const planPromise = executePlan(job, gpuClassMap)
-      .catch((err) => {
+      .catch((err: any) => {
         console.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
       })
       .finally(() => {

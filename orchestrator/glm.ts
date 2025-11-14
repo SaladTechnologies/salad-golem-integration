@@ -3,17 +3,15 @@ import { pinoPrettyLogger } from "@golem-sdk/pino-logger";
 import config from "config";
 
 // Initialize Golem Network client
-const glm = new GolemNetwork({
+export const glm = new GolemNetwork({
   logger: pinoPrettyLogger({ level: "debug" }),
   api: {
-    key: config.get("apiKey")
+    key: config.get<string>("apiKey")
   },
   payment: {
-    network: config.get("paymentNetwork")
+    network: config.get<string>("paymentNetwork")
   }
 });
 
 // Create AbortController for cancellation
-const shutdown = new AbortController();
-
-export { glm, shutdown };
+export const shutdown = new AbortController();
