@@ -1,7 +1,9 @@
-import { processPlans } from './monitor.js';
+import { activePlans, processPlans } from './monitor.js';
 import { nodesDb, plansDb, pricesDb } from './db.js';
 import { glm, shutdown } from './glm.js';
 import { logger } from './logger.js';
+import { k8sApi, k8sProviderNamespace } from './k8s.js';
+import { deprovisionNode } from './provider.js';
 
 // Handle graceful shutdown
 process.on('SIGINT', () => shutdownHandler('SIGINT'));
@@ -27,6 +29,17 @@ async function shutdownHandler(signal: string) {
   await glm.disconnect();
 
   console.log('Disconnected from Golem Network.');
+
+  // Deprovision all active provider nodes
+  for (const [planKey] of activePlans) {
+    try {
+      logger.info(`Devprovisioning provider node-${planKey} during shutdown...`);
+      await deprovisionNode(k8sApi, k8sProviderNamespace, { name: `node-${planKey}`, environment: {}, presets: {}, offerTemplate: {} });
+      logger.info(`Deprovisioned provider node-${planKey} during shutdown.`);
+    } catch (err) {
+      logger.error(`Error while waiting for provider node-${planKey} during shutdown:`);
+    }
+  }
 
   // Close DB connections
   await Promise.all([

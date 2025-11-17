@@ -6,7 +6,7 @@ import { getGpuClasses } from './matrix.js';
 import { executePlan } from './executor.js';
 
 // Track active plans to prevent overlapping executions
-let activePlans = new Map<string, Promise<void>>();
+export let activePlans = new Map<string, Promise<void>>();
 
 // Track failed plans to avoid repeated failures
 let failedPlans = new Set<number>();

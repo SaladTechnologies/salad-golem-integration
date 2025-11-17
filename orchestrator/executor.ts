@@ -135,7 +135,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 
     // Prepare the node definition for provisioning
     const node: Node = {
-      name: `node-${initialJob.node_id}-${initialJob.node_plan_id}-${initialJob.order_index}`,
+      name: `node-${initialJob.node_id}`,
       environment: {
         NODE_NAME: `node-${initialJob.node_id}`,
         SUBNET: "public",
@@ -260,6 +260,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
   logger.info(`All jobs for plan_id=${initialJob.node_plan_id} completed.`);
 }
 
+// Ensure the Pod is ready by deprovisioning any existing Pod and provisioning a new one
 async function ensurePodReady(
   node: Node,
   namespace: string,
