@@ -49,34 +49,34 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     if (!gpuClass) {
       throw new Error(`GPU class not found for gpu_class_id=${initialJob.gpu_class_id}`);
     }
-      // Find a GPU on the node that matches the GPU class filters
-      let matchingGpu: GpuInfo | null = null;
-      for (const [key, value] of Object.entries(nodeState.gpuZ)) {
-        const gpu = value as GpuInfo;
-        if (new RegExp(gpuClass.filters.gpuCardNameInclude).test(gpu.PROP_CARD_NAME)) {
-          logger.info(`Node ${initialJob.node_id} GPU ${gpu.PROP_CARD_NAME ?? ''} matches GPU class regexp ${gpuClass.name_regexp}`);
-          matchingGpu = gpu;
-          break;
-        }
+    // Find a GPU on the node that matches the GPU class filters
+    let matchingGpu: GpuInfo | null = null;
+    for (const [key, value] of Object.entries(nodeState.gpuZ)) {
+      const gpu = value as GpuInfo;
+      if (new RegExp(gpuClass.filters.gpuCardNameInclude).test(gpu.PROP_CARD_NAME)) {
+        logger.info(`Node ${initialJob.node_id} GPU ${gpu.PROP_CARD_NAME ?? ''} matches GPU class regexp ${gpuClass.name_regexp}`);
+        matchingGpu = gpu;
+        break;
       }
+    }
 
-      if (!matchingGpu) {
-        throw new Error(`No matching GPU found on node_id=${initialJob.node_id} for gpu_class_id=${initialJob.gpu_class_id}`);
-      }
+    if (!matchingGpu) {
+      throw new Error(`No matching GPU found on node_id=${initialJob.node_id} for gpu_class_id=${initialJob.gpu_class_id}`);
+    }
 
-      // Construct offer template based on matching GPU
-      gpuOfferTemplate = {
-        "golem.!exp.gap-35.v1.inf.gpu.clocks.graphics.mhz": parseInt(matchingGpu.PROP_CLOCK_GPU),
-        "golem.!exp.gap-35.v1.inf.gpu.clocks.memory.mhz": parseInt(matchingGpu.PROP_CLOCK_MEM),
-        "golem.!exp.gap-35.v1.inf.gpu.cuda.compute-capability": matchingGpu.PROP_CUDA_CAPABILITY,
-        "golem.!exp.gap-35.v1.inf.gpu.cuda.enabled": matchingGpu.PROP_CUDA_SUPPORTED == "1",
-        "golem.!exp.gap-35.v1.inf.gpu.cuda.version": matchingGpu.PROP_CUDA_CAPABILITY,
-        "golem.!exp.gap-35.v1.inf.gpu.memory.bandwidth.gib": parseFloat(matchingGpu.PROP_MEM_BANDWIDTH),
-        "golem.!exp.gap-35.v1.inf.gpu.memory.total.gib": parseInt(matchingGpu.PROP_MEM_SIZE) / 1024,
-        "golem.!exp.gap-35.v1.inf.gpu.model": matchingGpu.PROP_CARD_NAME
-      };
+    // Construct offer template based on matching GPU
+    gpuOfferTemplate = {
+      "golem.!exp.gap-35.v1.inf.gpu.clocks.graphics.mhz": parseInt(matchingGpu.PROP_CLOCK_GPU),
+      "golem.!exp.gap-35.v1.inf.gpu.clocks.memory.mhz": parseInt(matchingGpu.PROP_CLOCK_MEM),
+      "golem.!exp.gap-35.v1.inf.gpu.cuda.compute-capability": matchingGpu.PROP_CUDA_CAPABILITY,
+      "golem.!exp.gap-35.v1.inf.gpu.cuda.enabled": matchingGpu.PROP_CUDA_SUPPORTED == "1",
+      "golem.!exp.gap-35.v1.inf.gpu.cuda.version": matchingGpu.PROP_CUDA_CAPABILITY,
+      "golem.!exp.gap-35.v1.inf.gpu.memory.bandwidth.gib": parseFloat(matchingGpu.PROP_MEM_BANDWIDTH),
+      "golem.!exp.gap-35.v1.inf.gpu.memory.total.gib": parseInt(matchingGpu.PROP_MEM_SIZE) / 1024,
+      "golem.!exp.gap-35.v1.inf.gpu.model": matchingGpu.PROP_CARD_NAME
+    };
 
-      logger.info(`Node ${initialJob.node_id} has matching GPU: ${matchingGpu.PROP_CARD_NAME ?? ''}`);
+    logger.info(`Node ${initialJob.node_id} has matching GPU: ${matchingGpu.PROP_CARD_NAME ?? ''}`);
   }
 
   // Retrieve the node wallet
@@ -134,7 +134,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 
     const glmEnvPerHourPrice = currentJob.usd_per_hour / glmPrice.price_usd;
 
-    // Provision provider with K8s cluster
+    // Prepare the node definition for provisioning
     const node: Node = {
       name: `node-${initialJob.node_id}-${initialJob.node_plan_id}-${initialJob.order_index}`,
       environment: {
@@ -177,11 +177,13 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       }
     };
 
+    // Provision provider to K8s cluster
     try {
       logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
       await provisionNode(k8sApi, k8sProviderNamespace, node);
       logger.info(`Provisioned node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
     } catch (error) {
+      // Handle already exists error
       if (error instanceof ApiException && error.code === 409) {
         logger.info(`Node_id=${initialJob.node_id} is already provisioned. Continuing.`);
       }

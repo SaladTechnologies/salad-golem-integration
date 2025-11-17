@@ -8,6 +8,9 @@ import { executePlan } from './executor.js';
 // Track active plans to prevent overlapping executions
 let activePlans = new Map<string, Promise<void>>();
 
+// Track failed plans to avoid repeated failures
+let failedPlans = new Set<number>();
+
 /**
  * Process plans that are due to start.
  */
@@ -74,12 +77,19 @@ export async function processPlans(): Promise<void> {
       continue;
     }
 
+    // Skip if this plan has previously failed
+    if (failedPlans.has(job.node_plan_id)) {
+      logger.debug(`Plan_id=${job.node_plan_id} has previously failed. Skipping.`);
+      continue;
+    }
+
     // Kick off the plan
     logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) at ${new Date(now).toISOString()}`);
     const planPromise = executePlan(job, gpuClassMap)
       .catch((err: any) => {
+        failedPlans.add(job.node_plan_id);
         logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
-        console.log(err);
+        console.error(err);
       })
       .finally(() => {
         activePlans.delete(job.node_id);
