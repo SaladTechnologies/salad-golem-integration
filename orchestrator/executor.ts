@@ -7,7 +7,6 @@ import { logger } from './logger.js';
 import { deprovisionNode, Node, provisionNode } from './provider.js';
 import { k8sApi, k8sProviderNamespace } from './k8s.js';
 import config from 'config';
-import { match } from 'assert';
 import { ApiException } from '@kubernetes/client-node';
 
 interface Job {
@@ -177,22 +176,8 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       }
     };
 
-    // Provision provider to K8s cluster
-    try {
-      logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
-      await provisionNode(k8sApi, k8sProviderNamespace, node);
-      logger.info(`Provisioned node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
-    } catch (error) {
-      // Handle already exists error
-      if (error instanceof ApiException && error.code === 409) {
-        logger.info(`Node_id=${initialJob.node_id} is already provisioned. Continuing.`);
-      }
-      else {
-        logger.error(`Error provisioning node_id=${initialJob.node_id}`);
-        console.log(error);
-        throw error;
-      }
-    }
+    logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
+    let provisioningTask = ensurePodReady(node, k8sProviderNamespace, shutdown.signal);
 
     // Do the work for the current job
     logger.info(`Executing job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
@@ -273,4 +258,55 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
   } while (currentJob != null);
 
   logger.info(`All jobs for plan_id=${initialJob.node_plan_id} completed.`);
+}
+
+async function ensurePodReady(
+  node: Node,
+  namespace: string,
+  signal?: AbortSignal
+) {
+  let podExists = false;
+  let isTerminating = false;
+
+  try {
+    const res = await k8sApi.readNamespacedPod({ name:node.name, namespace });
+    podExists = true;
+    isTerminating = res.metadata?.deletionTimestamp !== undefined;
+  } catch (err) {
+    if (err instanceof ApiException && err.code === 404) {
+      podExists = false;
+    }
+  }
+
+  if (podExists && !isTerminating) {
+    try {
+      await deprovisionNode(k8sApi, namespace, node);
+      logger.info(`Deprovisioned existing pod ${node.name}`);
+      isTerminating = true;
+    } catch (err) {
+      logger.error(`Error deprovisioning existing pod ${node.name}:`);
+    }
+  }
+
+  if (podExists && isTerminating) {
+    // Poll until the pod is deleted or cancelled
+    while (true) {
+      if (signal?.aborted) throw new Error('ensurePodReady cancelled');
+      try {
+        logger.info(`Waiting for terminating pod ${node.name} to be deleted...`);
+        await new Promise(res => setTimeout(res, 10000));
+        await k8sApi.readNamespacedPod({ name:node.name, namespace });
+      } catch (err) {
+        if (err instanceof ApiException && err.code === 404) {
+          logger.info(`Pod ${node.name} has been deleted.`);
+          break;
+        }
+        throw err;
+      }
+    }
+  }
+
+  if (signal?.aborted) throw new Error('ensurePodReady cancelled');
+  await provisionNode(k8sApi, namespace, node);
+  logger.info(`Provisioned pod ${node.name}`);
 }
