@@ -7,5 +7,6 @@
   "paymentNetwork": "amoy",
   "plansDatabaseFilePath": "../data/plans.db",
   "pricesDatabaseFilePath": "../data/prices.db",
-  "timeLag": "24hr"
+  "timeLag": "24hr",
+  "yagnaAccount": "0xf0ef26ae45b90c218104384d84f2092efa09aeb0"
 }
