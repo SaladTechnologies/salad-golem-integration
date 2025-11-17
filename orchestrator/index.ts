@@ -36,5 +36,10 @@ async function shutdownHandler(signal: string) {
   ]);
 
   logger.info(`Received ${signal}. Cleared interval, closed DBs, and exiting.`);
+
+  // Flush logger
+  logger.flush();
+
+  // Exit process
   process.exit(0);
 }
