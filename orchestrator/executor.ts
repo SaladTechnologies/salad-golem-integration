@@ -64,10 +64,11 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     { $nodeId: initialJob.node_id }
   );
 
+  let wallet = null;
   // If no wallet exists, create one
   if (!nodeWallet) {
        // Create a new wallet for the node
-       const wallet = ethers.Wallet.createRandom();
+       wallet = ethers.Wallet.createRandom();
        logger.info(`Creating new wallet for node_id=${initialJob.node_id} with address=${wallet.address}`);
 
        // Insert node wallet into database
@@ -87,69 +88,8 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
          wallet_mnemonic: mnemonicPhrase
        };
   }
-
-  // TODO: Provision provider with K8s cluster
-
-  const node: Node = {
-    name: `node-${initialJob.node_id}-${initialJob.node_plan_id}-${initialJob.order_index}`,
-    environment: {
-      NODE_NAME: `node-${initialJob.node_id}`,
-      SUBNET: "public",
-      YA_ACCOUNT: "0xf0ef26ae45b90c218104384d84f2092efa09aeb0",
-      YA_PAYMENT_NETWORK_GROUP: "testnet",
-      //YAGNA_AUTOCONF_ID_SECRET: "x"
-    },
-    offerTemplate: {
-      "golem.!exp.gap-35.v1.inf.gpu.clocks.graphics.mhz": 1950,
-      "golem.!exp.gap-35.v1.inf.gpu.clocks.memory.mhz": 1750,
-      "golem.!exp.gap-35.v1.inf.gpu.clocks.sm.mhz": 1950,
-      "golem.!exp.gap-35.v1.inf.gpu.clocks.video.mhz": 1950,
-      "golem.!exp.gap-35.v1.inf.gpu.cuda.compute-capability": "8.6",
-      "golem.!exp.gap-35.v1.inf.gpu.cuda.cores": 4864,
-      "golem.!exp.gap-35.v1.inf.gpu.cuda.enabled": true,
-      "golem.!exp.gap-35.v1.inf.gpu.cuda.version": "13.0",
-      "golem.!exp.gap-35.v1.inf.gpu.memory.bandwidth.gib": 448.0,
-      "golem.!exp.gap-35.v1.inf.gpu.memory.total.gib": 8.0,
-      "golem.!exp.gap-35.v1.inf.gpu.model": "NVIDIA GeForce RTX 3060 Ti",
-      "golem.inf.cpu.brand": "Intel(R) Core(TM) i9-14900K",
-      "golem.inf.cpu.model": "Stepping 1 Family 6 Model 183",
-      "golem.inf.cpu.vendor": "GenuineIntel"
-    },
-    presets: {
-      "ver": "V1",
-      "active": [
-        "salad"
-      ],
-      "presets": [
-        {
-          "name": "default",
-          "exeunit-name": "wasmtime",
-          "pricing-model": "linear",
-          "initial-price": 0.0,
-          "usage-coeffs": {}
-        },
-        {
-          "name": "salad",
-          "exeunit-name": "salad",
-          "pricing-model": "linear",
-          "initial-price": 0.0,
-          "usage-coeffs": {
-            "golem.usage.cpu_sec": 0,
-            "golem.usage.duration_sec": 2.4059e-4
-          }
-        }
-      ]
-    }
-  };
-
-  try {
-    logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
-    await provisionNode(k8sApi, k8sProviderNamespace, node);
-    logger.info(`Provisioned node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
-  } catch (error) {
-      logger.error(`Error provisioning node_id=${initialJob.node_id}`);
-      console.log(error);
-      throw error;
+  else {
+    wallet = ethers.Wallet.fromPhrase(nodeWallet.wallet_mnemonic);
   }
 
   // Simulate job execution
@@ -168,13 +108,77 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       throw new Error('No GLM-USD price available');
     }
 
+    const glmEnvPerHourPrice = currentJob.usd_per_hour / glmPrice.price_usd;
+
+    // Provision provider with K8s cluster
+    const node: Node = {
+      name: `node-${initialJob.node_id}-${initialJob.node_plan_id}-${initialJob.order_index}`,
+      environment: {
+        NODE_NAME: `node-${initialJob.node_id}`,
+        SUBNET: "public",
+        YA_ACCOUNT: "0xf0ef26ae45b90c218104384d84f2092efa09aeb0",
+        YA_PAYMENT_NETWORK_GROUP: "testnet",
+        YAGNA_AUTOCONF_ID_SECRET: wallet.privateKey.substring(2) // remove '0x' prefix
+      },
+      offerTemplate: {
+        "golem.!exp.gap-35.v1.inf.gpu.clocks.graphics.mhz": 1950,
+        "golem.!exp.gap-35.v1.inf.gpu.clocks.memory.mhz": 1750,
+        "golem.!exp.gap-35.v1.inf.gpu.clocks.sm.mhz": 1950,
+        "golem.!exp.gap-35.v1.inf.gpu.clocks.video.mhz": 1950,
+        "golem.!exp.gap-35.v1.inf.gpu.cuda.compute-capability": "8.6",
+        "golem.!exp.gap-35.v1.inf.gpu.cuda.cores": 4864,
+        "golem.!exp.gap-35.v1.inf.gpu.cuda.enabled": true,
+        "golem.!exp.gap-35.v1.inf.gpu.cuda.version": "13.0",
+        "golem.!exp.gap-35.v1.inf.gpu.memory.bandwidth.gib": 448.0,
+        "golem.!exp.gap-35.v1.inf.gpu.memory.total.gib": 8.0,
+        "golem.!exp.gap-35.v1.inf.gpu.model": "NVIDIA GeForce RTX 3060 Ti",
+        "golem.inf.cpu.brand": "Intel(R) Core(TM) i9-14900K",
+        "golem.inf.cpu.model": "Stepping 1 Family 6 Model 183",
+        "golem.inf.cpu.vendor": "GenuineIntel"
+      },
+      presets: {
+        "ver": "V1",
+        "active": [
+          "salad"
+        ],
+        "presets": [
+          {
+            "name": "default",
+            "exeunit-name": "wasmtime",
+            "pricing-model": "linear",
+            "initial-price": 0.0,
+            "usage-coeffs": {}
+          },
+          {
+            "name": "salad",
+            "exeunit-name": "salad",
+            "pricing-model": "linear",
+            "initial-price": 0.0,
+            "usage-coeffs": {
+              "golem.usage.cpu_sec": 0,
+              "golem.usage.duration_sec": glmEnvPerHourPrice / 3600
+            }
+          }
+        ]
+      }
+    };
+
+    try {
+      logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
+      await provisionNode(k8sApi, k8sProviderNamespace, node);
+      logger.info(`Provisioned node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
+    } catch (error) {
+      logger.error(`Error provisioning node_id=${initialJob.node_id}`);
+      console.log(error);
+      throw error;
+    }
+
     // Do the work for the current job
     logger.info(`Executing job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
 
     // Integrate with Golem Network to run the job
     let rental: any;
     try {
-      const glmEnvPerHourPrice = currentJob.usd_per_hour / glmPrice.price_usd;
       const rentHours = Math.round((currentJob.adjusted_duration / (1000 * 60 * 60)) * 10) / 10
       logger.info(`Requesting rental for ${rentHours} hours with env per hour price: ${glmEnvPerHourPrice.toFixed(6)} GLM/hour`);
 
@@ -221,23 +225,34 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 
     logger.info(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
 
-       // Grab the next job from the plan, if any
-       const nextJob = await plansDb.get<Job>(
-         `SELECT np.node_id, np.usd_per_hour, np.gpu_class_id, npj.node_plan_id, npj.order_index, npj.start_at + npj.duration - $adjustedNow AS adjusted_duration, npj.duration
-         FROM node_plan_job npj
-         JOIN node_plan np ON np.id = npj.node_plan_id
-         WHERE npj.node_plan_id = $nodePlanId
-           AND npj.order_index = $nextOrderIndex`,
-         {
-           $nodePlanId: initialJob.node_plan_id,
-           $nextOrderIndex: initialJob.order_index + 1
-         }
-       );
-       currentJob = nextJob ?? null;
+    // Deprovision provider from K8s cluster
+    try {
+      logger.info(`Deprovisioning node_id=${initialJob.node_id}`);
+      await deprovisionNode(k8sApi, k8sProviderNamespace, node);
+      logger.info(`Deprovisioned node_id=${initialJob.node_id}`);
+    } catch (error) {
+      logger.error(`Error deprovisioning node_id=${initialJob.node_id}`);
+      console.log(error);
+      throw error;
+    }
+
+    // Grab the next job from the plan, if any
+    const nextJob = await plansDb.get<Job>(
+      `SELECT np.node_id, np.usd_per_hour, np.gpu_class_id, npj.node_plan_id, npj.order_index, npj.start_at + npj.duration - $adjustedNow AS adjusted_duration, npj.duration
+      FROM node_plan_job npj
+      JOIN node_plan np ON np.id = npj.node_plan_id
+      WHERE npj.node_plan_id = $nodePlanId
+        AND npj.order_index = $nextOrderIndex`,
+      {
+        $nodePlanId: initialJob.node_plan_id,
+        $nextOrderIndex: initialJob.order_index + 1
+      }
+    );
+    currentJob = nextJob ?? null;
     // Loop until there are no more jobs in the plan
   } while (currentJob != null);
 
   logger.info(`All jobs for plan_id=${initialJob.node_plan_id} completed.`);
 
-  // TODO: Deprovision provider with K8s cluster
+
 }
