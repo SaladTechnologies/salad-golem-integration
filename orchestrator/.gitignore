@@ -143,3 +143,6 @@ vite.config.ts.timestamp-*
 # Configuration files
 config/development.json
 config/production.json
+
+# Kubernetes config files
+config/kubeconfig.yaml

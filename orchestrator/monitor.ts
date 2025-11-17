@@ -79,6 +79,7 @@ export async function processPlans(): Promise<void> {
     const planPromise = executePlan(job, gpuClassMap)
       .catch((err: any) => {
         logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
+        console.log(err);
       })
       .finally(() => {
         activePlans.delete(job.node_id);

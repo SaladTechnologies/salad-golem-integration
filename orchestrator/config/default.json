@@ -1,6 +1,7 @@
 {
   "apiKey": "eb9d0e5f5f144a7a8267c715af5d3300",
   "k8sProviderNamespace": "golem-providers",
+  "kubeConfigPath": "config/kubeconfig.yaml",
   "minimumDuration": "5min",
   "maximumDuration": "180min",
   "nodesDatabaseFilePath": "../data/nodes.db",
