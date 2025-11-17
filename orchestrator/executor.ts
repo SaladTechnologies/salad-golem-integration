@@ -4,6 +4,8 @@ import { glm, shutdown } from './glm.js';
 import { getNodeState } from './matrix.js';
 import { ethers } from 'ethers';
 import { logger } from './logger.js';
+import { deprovisionNode, Node, provisionNode } from './provider.js';
+import { k8sApi, k8sProviderNamespace } from './k8s.js';
 
 interface Job {
   node_id: string;
@@ -87,6 +89,68 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
   }
 
   // TODO: Provision provider with K8s cluster
+
+  const node: Node = {
+    name: `node-${initialJob.node_id}-${initialJob.node_plan_id}-${initialJob.order_index}`,
+    environment: {
+      NODE_NAME: `node-${initialJob.node_id}`,
+      SUBNET: "public",
+      YA_ACCOUNT: "0xf0ef26ae45b90c218104384d84f2092efa09aeb0",
+      YA_PAYMENT_NETWORK_GROUP: "testnet",
+      //YAGNA_AUTOCONF_ID_SECRET: "x"
+    },
+    offerTemplate: {
+      "golem.!exp.gap-35.v1.inf.gpu.clocks.graphics.mhz": 1950,
+      "golem.!exp.gap-35.v1.inf.gpu.clocks.memory.mhz": 1750,
+      "golem.!exp.gap-35.v1.inf.gpu.clocks.sm.mhz": 1950,
+      "golem.!exp.gap-35.v1.inf.gpu.clocks.video.mhz": 1950,
+      "golem.!exp.gap-35.v1.inf.gpu.cuda.compute-capability": "8.6",
+      "golem.!exp.gap-35.v1.inf.gpu.cuda.cores": 4864,
+      "golem.!exp.gap-35.v1.inf.gpu.cuda.enabled": true,
+      "golem.!exp.gap-35.v1.inf.gpu.cuda.version": "13.0",
+      "golem.!exp.gap-35.v1.inf.gpu.memory.bandwidth.gib": 448.0,
+      "golem.!exp.gap-35.v1.inf.gpu.memory.total.gib": 8.0,
+      "golem.!exp.gap-35.v1.inf.gpu.model": "NVIDIA GeForce RTX 3060 Ti",
+      "golem.inf.cpu.brand": "Intel(R) Core(TM) i9-14900K",
+      "golem.inf.cpu.model": "Stepping 1 Family 6 Model 183",
+      "golem.inf.cpu.vendor": "GenuineIntel"
+    },
+    presets: {
+      "ver": "V1",
+      "active": [
+        "salad"
+      ],
+      "presets": [
+        {
+          "name": "default",
+          "exeunit-name": "wasmtime",
+          "pricing-model": "linear",
+          "initial-price": 0.0,
+          "usage-coeffs": {}
+        },
+        {
+          "name": "salad",
+          "exeunit-name": "salad",
+          "pricing-model": "linear",
+          "initial-price": 0.0,
+          "usage-coeffs": {
+            "golem.usage.cpu_sec": 0,
+            "golem.usage.duration_sec": 2.4059e-4
+          }
+        }
+      ]
+    }
+  };
+
+  try {
+    logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
+    await provisionNode(k8sApi, k8sProviderNamespace, node);
+    logger.info(`Provisioned node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
+  } catch (error) {
+      logger.error(`Error provisioning node_id=${initialJob.node_id}`);
+      console.log(error);
+      throw error;
+  }
 
   // Simulate job execution
   let currentJob: Job | null = initialJob;

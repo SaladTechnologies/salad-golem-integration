@@ -70,7 +70,7 @@ export async function processPlans(): Promise<void> {
 
     // Enforce max concurrent jobs
     if (maxConcurrentJobs > 0 && activePlans.size >= maxConcurrentJobs) {
-      logger.info(`Maximum concurrent jobs reached (${maxConcurrentJobs}). Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
+      logger.debug(`Maximum concurrent jobs reached (${maxConcurrentJobs}). Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
       continue;
     }
 
