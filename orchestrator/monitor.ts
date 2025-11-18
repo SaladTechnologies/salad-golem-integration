@@ -43,7 +43,7 @@ export async function processPlans(): Promise<void> {
     }
   );
 
-  logger.info(`Processing ${jobs.length} due jobs}`);
+  logger.info(`Processing ${jobs.length} due jobs`);
 
   // Skip if no jobs
   if (jobs.length === 0) {
