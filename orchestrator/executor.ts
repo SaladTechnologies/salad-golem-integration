@@ -8,6 +8,8 @@ import { deprovisionNode, Node, provisionNode } from './provider.js';
 import { k8sApi, k8sProviderNamespace } from './k8s.js';
 import config from 'config';
 import { ApiException } from '@kubernetes/client-node';
+import timespan from 'timespan-parser';
+import { getAdjustedNow } from './time.js';
 
 interface Job {
   node_id: string;
@@ -228,6 +230,9 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       logger.info(`Executing job with runtime timeout ${runtimeTimeout} ms`);
 
       await remoteProcess.waitForExit(runtimeTimeout);
+    } catch (err) {
+      logger.error(`Error during execution of job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id}):`);
+      console.error(err);
     } finally {
       if (rental) await rental.stopAndFinalize();
     }
@@ -245,13 +250,22 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     }
 
     // Grab the next job from the plan, if any
-    const nextJob = await plansDb.get<Job>(
-      `SELECT np.node_id, np.usd_per_hour, np.gpu_class_id, npj.node_plan_id, npj.order_index, npj.start_at + npj.duration - $adjustedNow AS adjusted_duration, npj.duration
+    const nextJob = await plansDb.get<Job>(`
+      SELECT
+        np.node_id,
+        np.org_name,
+        np.usd_per_hour,
+        np.gpu_class_id,
+        npj.node_plan_id,
+        npj.order_index,
+        npj.start_at + npj.duration - $adjustedNow AS adjusted_duration,
+        npj.duration
       FROM node_plan_job npj
       JOIN node_plan np ON np.id = npj.node_plan_id
       WHERE npj.node_plan_id = $nodePlanId
         AND npj.order_index = $nextOrderIndex`,
       {
+        $adjustedNow: getAdjustedNow(),
         $nodePlanId: initialJob.node_plan_id,
         $nextOrderIndex: initialJob.order_index + 1
       }

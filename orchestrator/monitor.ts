@@ -6,6 +6,7 @@ import { getGpuClasses } from './matrix.js';
 import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
 import { k8sApi, k8sProviderNamespace } from './k8s.js';
+import { getAdjustedNow } from './time.js';
 
 // Track active plans to prevent overlapping executions
 export let activePlans = new Map<string, Promise<void>>();
@@ -17,12 +18,8 @@ let failedPlans = new Set<number>();
  * Process plans that are due to start.
  */
 export async function processPlans(): Promise<void> {
-  const now = Date.now();
-
   // Subtract time lag from config
   const timespanParser = timespan({ unit: 'ms' });
-  const timeLag = timespanParser.parse(config.get('timeLag'));
-  const adjustedNow = now - timeLag;
   const minimumDuration = timespanParser.parse(config.get('minimumDuration'));
 
   const jobs = await plansDb.all<any[]>(`
@@ -41,12 +38,12 @@ export async function processPlans(): Promise<void> {
       AND $adjustedNow < npj.start_at + npj.duration
       AND npj.start_at + npj.duration - $adjustedNow > $minimumDuration`,
     {
-      $adjustedNow: adjustedNow,
+      $adjustedNow: getAdjustedNow(),
       $minimumDuration: minimumDuration,
     }
   );
 
-  logger.info(`Processing ${jobs.length} due jobs at ${new Date(now).toISOString()}`);
+  logger.info(`Processing ${jobs.length} due jobs}`);
 
   // Skip if no jobs
   if (jobs.length === 0) {
