@@ -4,6 +4,8 @@ import { logger } from './logger.js';
 import { plansDb } from './db.js';
 import { getGpuClasses } from './matrix.js';
 import { executePlan } from './executor.js';
+import { deprovisionNode } from './provider.js';
+import { k8sApi, k8sProviderNamespace } from './k8s.js';
 
 // Track active plans to prevent overlapping executions
 export let activePlans = new Map<string, Promise<void>>();
@@ -86,10 +88,21 @@ export async function processPlans(): Promise<void> {
     // Kick off the plan
     logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) at ${new Date(now).toISOString()}`);
     const planPromise = executePlan(job, gpuClassMap)
-      .catch((err: any) => {
-        failedPlans.add(job.node_plan_id);
+      .catch(async (err: any) => {
         logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
         console.error(err);
+
+        // Mark this plan as failed
+        failedPlans.add(job.node_plan_id);
+
+        // Deprovision the provider node on failure
+        try {
+          logger.info(`Devprovisioning provider node-${job.node_id} during shutdown...`);
+          await deprovisionNode(k8sApi, k8sProviderNamespace, { name: `node-${job.node_id}`, environment: {}, presets: {}, offerTemplate: {} });
+          logger.info(`Deprovisioned provider node-${job.node_id} during shutdown.`);
+        } catch (err) {
+          logger.error(`Error while waiting for provider node-${job.node_id} during shutdown:`);
+        }
       })
       .finally(() => {
         activePlans.delete(job.node_id);

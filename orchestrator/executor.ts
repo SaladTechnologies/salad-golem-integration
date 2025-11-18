@@ -212,7 +212,10 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
         signalOrTimeout: shutdown.signal,
       });
 
-      const exe = await rental.getExeUnit(Math.round(currentJob.adjusted_duration * 1.01));
+      const runtimeTimeout = Math.round(currentJob.adjusted_duration * 1.01);
+      logger.info(`Executing job with runtime timeout ${runtimeTimeout} ms`);
+
+      const exe = await rental.getExeUnit(runtimeTimeout);
       const remoteProcess = await exe.runAndStream(
         currentJob.node_id,
         [JSON.stringify({ duration: currentJob.duration / 1000 })],
