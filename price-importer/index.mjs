@@ -2,6 +2,16 @@ import { getGlmPrice } from './fetcher.mjs';
 import { pricesDb } from './db.mjs';
 import { logger } from './logger.mjs';
 
+// Handle graceful shutdown
+process.on('SIGINT', () => shutdownHandler('SIGINT'));
+process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
+
+async function shutdownHandler(signal) {
+  logger.info(`Received ${signal}, shutting down...`);
+  await pricesDb.close();
+  process.exit(0);
+}
+
 // Initial fetch and store
 await fetchAndStorePrice();
 
@@ -29,9 +39,8 @@ async function fetchAndStorePrice() {
 
     logger.info(`Inserted GLM price $${glmPrice} into database.`);
 
-    // Close the database connection
-    await pricesDb.close();
   } catch (error) {
-    logger.error('Error in fetchAndStorePrice:', error.message);
+    logger.error('Error in fetchAndStorePrice:');
+    console.log(error);
   }
 }
