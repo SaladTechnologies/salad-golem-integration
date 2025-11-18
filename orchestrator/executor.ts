@@ -119,7 +119,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
   let currentJob: Job | null = initialJob;
 
   // Prepare whitelist of provider IDs (node wallet address)
-  const whitelistProviderIds = [nodeWallet.wallet_address];
+  const whitelistProviderIds = [nodeWallet.wallet_address.toLowerCase()];
 
   do {
     // Get the latest GLM-USD price
@@ -176,7 +176,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       }
     };
 
-    logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address}`);
+    logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address.toLowerCase()}`);
     let provisioningTask = ensurePodReady(node, k8sProviderNamespace, shutdown.signal);
 
     // Do the work for the current job
