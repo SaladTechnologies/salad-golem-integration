@@ -83,7 +83,7 @@ export async function processPlans(): Promise<void> {
     }
 
     // Kick off the plan
-    logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}) at ${new Date(now).toISOString()}`);
+    logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id})}`);
     const planPromise = executePlan(job, gpuClassMap)
       .catch(async (err: any) => {
         logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
