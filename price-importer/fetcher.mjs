@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import config from 'config';
+import { logger } from './logger.mjs';
 
 /**
  * Retrieves the latest GLM/USD price from the CoinMarketCap API
@@ -37,11 +38,11 @@ export async function getGlmPrice(apiKey) {
     }
 
     const price = glmData.quote.USD.price;
-    console.log(`Retrieved GLM price: $${price}`);
+    logger.info(`Retrieved GLM price: $${price}`);
 
     return price;
   } catch (error) {
-    console.error('Error fetching GLM price:', error.message);
+    logger.error('Error fetching GLM price:', error.message);
     throw error;
   }
 }
