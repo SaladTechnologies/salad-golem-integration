@@ -92,7 +92,7 @@ export async function processPlans(): Promise<void> {
         console.error(err);
 
         // Mark plan as failed if not aborted or runtime timeout
-        if (!(err instanceof GolemAbortError || (err instanceof GolemWorkError && err.previous instanceof GolemTimeoutError))) {
+        if (!(err instanceof GolemAbortError || (err instanceof GolemWorkError && err?.previous instanceof GolemTimeoutError))) {
           failedPlans.add(job.node_plan_id);
         }
 
