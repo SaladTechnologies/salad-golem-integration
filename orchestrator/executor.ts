@@ -228,7 +228,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       const exe = await rental.getExeUnit();
       const remoteProcess = await exe.runAndStream(
         currentJob.node_id,
-        [JSON.stringify({ duration: currentJob.duration / 1000 })],
+        [JSON.stringify({ duration: currentJob.adjusted_duration / 1000 })],
         {
           signalOrTimeout: rentalAbortController.signal
         }
