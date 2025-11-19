@@ -179,7 +179,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     };
 
     logger.info(`Provisioning node_id=${initialJob.node_id} with wallet address=${nodeWallet.wallet_address.toLowerCase()}`);
-    let provisioningTask = ensurePodReady(node, k8sProviderNamespace, shutdown.signal);
+    await ensurePodReady(node, k8sProviderNamespace, shutdown.signal);
 
     // Do the work for the current job
     logger.info(`Executing job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
@@ -238,6 +238,9 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     }
 
     logger.info(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
+
+    // Wait for 2 minutes before deprovisioning to allow for any cleanup
+    await new Promise(resolve => setTimeout(resolve, 120000));
 
     // Deprovision provider from K8s cluster
     try {
