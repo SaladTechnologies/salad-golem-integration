@@ -7,7 +7,7 @@ import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
 import { k8sApi, k8sProviderNamespace } from './k8s.js';
 import { getAdjustedNow } from './time.js';
-import { GolemAbortError } from '@golem-sdk/golem-js';
+import { GolemAbortError, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
 
 // Track active plans to prevent overlapping executions
 export let activePlans = new Map<string, Promise<void>>();
@@ -91,8 +91,8 @@ export async function processPlans(): Promise<void> {
         logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
         console.error(err);
 
-        // Mark plan as failed if not aborted
-        if (!(err instanceof GolemAbortError)) {
+        // Mark plan as failed if not aborted or runtime timeout
+        if (!(err instanceof GolemAbortError || (err instanceof GolemWorkError && err.previous instanceof GolemTimeoutError))) {
           failedPlans.add(job.node_plan_id);
         }
 
