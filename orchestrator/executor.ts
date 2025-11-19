@@ -142,7 +142,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
         NODE_NAME: `node-${initialJob.node_id}`,
         SUBNET: "public",
         YA_ACCOUNT: config.get<string>("yagnaAccount"),
-        YA_PAYMENT_NETWORK_GROUP: "testnet",
+        YA_PAYMENT_NETWORK_GROUP: "mainnet",
         YAGNA_AUTOCONF_ID_SECRET: wallet.privateKey.substring(2) // remove '0x' prefix
       },
       offerTemplate: {

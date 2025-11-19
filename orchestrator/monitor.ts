@@ -42,8 +42,10 @@ export async function processPlans(): Promise<void> {
       $minimumDuration: minimumDuration,
     }
   );
+  console.log(getAdjustedNow(), minimumDuration);
 
-  logger.info(`Processing ${jobs.length} due jobs`);
+  logger.info(`Found ${jobs.length} plans to process`);
+  logger.info(`Currently running ${activePlans.size} active jobs`);
 
   // Skip if no jobs
   if (jobs.length === 0) {
