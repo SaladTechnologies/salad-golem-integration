@@ -53,7 +53,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     for (const [key, value] of Object.entries(nodeState.gpuZ)) {
       const gpu = value as GpuInfo;
       if (new RegExp(gpuClass.filters.gpuCardNameInclude).test(gpu.PROP_CARD_NAME)) {
-        logger.info(`Node ${initialJob.node_id} GPU ${gpu.PROP_CARD_NAME ?? ''} matches GPU class regexp ${gpuClass.name_regexp}`);
+        logger.info(`Node ${initialJob.node_id} GPU ${gpu.PROP_CARD_NAME ?? ''} matches GPU class regexp ${gpuClass.filters.gpuCardNameInclude}`);
         matchingGpu = gpu;
         break;
       }
