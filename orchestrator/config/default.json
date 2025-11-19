@@ -3,7 +3,7 @@
   "k8sProviderNamespace": "golem-providers",
   "kubeConfigPath": "config/kubeconfig.yaml",
   "minimumDuration": "10min",
-  "maximumDuration": "20min",
+  "maximumDuration": "2hr",
   "nodesDatabaseFilePath": "../data/nodes.db",
   "paymentNetwork": "polygon",
   "plansDatabaseFilePath": "../data/plans.db",

@@ -3,6 +3,6 @@
   "minimumDuration": "10min",
   "mixPanelApiKey": "YOUR_MIXPANEL_API_KEY_HERE",
   "mixPanelJqlUrl": "https://mixpanel.com/api/query/jql",
-  "maximumDuration": "20min",
+  "maximumDuration": "2hr",
   "plansDatabaseFilePath": "../data/plans.db"
 }
