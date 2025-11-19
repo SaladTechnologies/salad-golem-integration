@@ -5,7 +5,7 @@
   "minimumDuration": "5min",
   "maximumDuration": "180min",
   "nodesDatabaseFilePath": "../data/nodes.db",
-  "paymentNetwork": "amoy",
+  "paymentNetwork": "polygon",
   "plansDatabaseFilePath": "../data/plans.db",
   "pricesDatabaseFilePath": "../data/prices.db",
   "timeLag": "48hr",
