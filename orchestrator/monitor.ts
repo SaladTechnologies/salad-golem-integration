@@ -7,6 +7,7 @@ import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
 import { k8sApi, k8sProviderNamespace } from './k8s.js';
 import { getAdjustedNow } from './time.js';
+import { GolemAbortError } from '@golem-sdk/golem-js';
 
 // Track active plans to prevent overlapping executions
 export let activePlans = new Map<string, Promise<void>>();
@@ -90,12 +91,14 @@ export async function processPlans(): Promise<void> {
         logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
         console.error(err);
 
-        // Mark this plan as failed
-        failedPlans.add(job.node_plan_id);
+        // Mark plan as failed if not aborted
+        if (!(err instanceof GolemAbortError)) {
+          failedPlans.add(job.node_plan_id);
+        }
 
         // Deprovision the provider node on failure
         try {
-          logger.info(`Devprovisioning provider node-${job.node_id} during shutdown...`);
+          logger.info(`Deprovisioning provider node-${job.node_id} during shutdown...`);
           await deprovisionNode(k8sApi, k8sProviderNamespace, { name: `node-${job.node_id}`, environment: {}, presets: {}, offerTemplate: {} });
           logger.info(`Deprovisioned provider node-${job.node_id} during shutdown.`);
         } catch (err) {

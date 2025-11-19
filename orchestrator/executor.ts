@@ -8,8 +8,6 @@ import { deprovisionNode, Node, provisionNode } from './provider.js';
 import { k8sApi, k8sProviderNamespace } from './k8s.js';
 import config from 'config';
 import { ApiException } from '@kubernetes/client-node';
-import timespan from 'timespan-parser';
-import { getAdjustedNow } from './time.js';
 
 interface Job {
   node_id: string;
@@ -143,6 +141,8 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
         SUBNET: "public",
         YA_ACCOUNT: config.get<string>("yagnaAccount"),
         YA_PAYMENT_NETWORK_GROUP: "mainnet",
+        YA_NET_TYPE: "central",
+        CENTRAL_NET_HOST: "polygongas.org:7999",
         YAGNA_AUTOCONF_ID_SECRET: wallet.privateKey.substring(2) // remove '0x' prefix
       },
       offerTemplate: {
@@ -184,6 +184,14 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     // Do the work for the current job
     logger.info(`Executing job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
 
+    // Create a controller that races shutdown and timeout
+    const rentalAbortController = new AbortController();
+    const shutdownListener = () => rentalAbortController.abort();
+    shutdown.signal.addEventListener('abort', shutdownListener);
+
+    // 10 minutes in ms
+    const timeoutId = setTimeout(() => rentalAbortController.abort(), 10 * 60 * 1000);
+
     // Integrate with Golem Network to run the job
     let rental: any;
     try {
@@ -211,36 +219,39 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
             offerProposalFilter: OfferProposalFilterFactory.allowProvidersById(whitelistProviderIds)
           },
         },
-        signalOrTimeout: shutdown.signal,
+        signalOrTimeout: rentalAbortController.signal,
       });
+
+      // Clear the timeout upon successful rental
+      clearTimeout(timeoutId);
 
       const exe = await rental.getExeUnit();
       const remoteProcess = await exe.runAndStream(
         currentJob.node_id,
         [JSON.stringify({ duration: currentJob.duration / 1000 })],
         {
-          signalOrTimeout: shutdown.signal
+          signalOrTimeout: rentalAbortController.signal
         }
       );
 
       remoteProcess.stdout.subscribe((data: string) => console.log(`${currentJob!.node_id} stdout>`, data));
       remoteProcess.stderr.subscribe((data: string) => console.error(`${currentJob!.node_id} stderr>`, data));
 
-      const runtimeTimeout = Math.round(currentJob.adjusted_duration * 1.01);
+      const runtimeTimeout = Math.round(currentJob.adjusted_duration * 1.02);
       logger.info(`Executing job with runtime timeout ${runtimeTimeout} ms`);
 
       await remoteProcess.waitForExit(runtimeTimeout);
     } catch (err) {
       logger.error(`Error during execution of job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id}):`);
       console.error(err);
+      throw err;
     } finally {
+      clearTimeout(timeoutId);
+      shutdown.signal.removeEventListener('abort', shutdownListener);
       if (rental) await rental.stopAndFinalize();
     }
 
     logger.info(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
-
-    // Wait for 2 minutes before deprovisioning to allow for any cleanup
-    await new Promise(resolve => setTimeout(resolve, 120000));
 
     // Deprovision provider from K8s cluster
     try {
@@ -261,14 +272,12 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
         np.gpu_class_id,
         npj.node_plan_id,
         npj.order_index,
-        npj.start_at + npj.duration - $adjustedNow AS adjusted_duration,
-        npj.duration
+        npj.duration AS adjusted_duration
       FROM node_plan_job npj
       JOIN node_plan np ON np.id = npj.node_plan_id
       WHERE npj.node_plan_id = $nodePlanId
         AND npj.order_index = $nextOrderIndex`,
       {
-        $adjustedNow: getAdjustedNow(),
         $nodePlanId: initialJob.node_plan_id,
         $nextOrderIndex: initialJob.order_index + 1
       }

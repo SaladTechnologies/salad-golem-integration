@@ -1,8 +1,8 @@
 {
   "dataDirectory": "../data",
-  "minimumDuration": "5min",
+  "minimumDuration": "10min",
   "mixPanelApiKey": "YOUR_MIXPANEL_API_KEY_HERE",
   "mixPanelJqlUrl": "https://mixpanel.com/api/query/jql",
-  "maximumDuration": "180min",
+  "maximumDuration": "20min",
   "plansDatabaseFilePath": "../data/plans.db"
 }
