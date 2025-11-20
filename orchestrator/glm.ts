@@ -4,7 +4,7 @@ import config from "config";
 
 // Initialize Golem Network client
 export const glm = new GolemNetwork({
-  logger: pinoPrettyLogger({ level: "debug" }),
+  logger: pinoPrettyLogger({ level: "info" }),
   api: {
     key: config.get<string>("apiKey")
   },
