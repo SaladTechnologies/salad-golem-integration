@@ -15,6 +15,9 @@ export let activePlans = new Map<string, Promise<void>>();
 // Track failed plans to avoid repeated failures
 let failedPlans = new Set<number>();
 
+// Cache GPU classes to minimize API calls
+let gpuClasses: any[] = [];
+
 /**
  * Process plans that are due to start.
  */
@@ -53,7 +56,13 @@ export async function processPlans(): Promise<void> {
   }
 
   // Fetch GPU classes from Matrix
-  const gpuClasses = await getGpuClasses();
+  if (gpuClasses.length === 0) {
+    try {
+      gpuClasses = await getGpuClasses();
+    } catch (err) {
+      logger.error('Error fetching GPU classes:');
+    }
+  }
   const gpuClassMap = new Map(gpuClasses.map((gc: any) => [gc.uuid, gc]));
 
   const maxConcurrentJobs = config.get<number>('maxConcurrentJobs');

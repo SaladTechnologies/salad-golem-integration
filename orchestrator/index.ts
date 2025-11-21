@@ -10,7 +10,7 @@ process.on('SIGINT', () => shutdownHandler('SIGINT'));
 process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
 
 // Connect to Golem Network
-await glm.connect();
+//await glm.connect();
 
 // Initial plan processing on startup
 await processPlans();
@@ -26,7 +26,7 @@ async function shutdownHandler(signal: string) {
   shutdown.abort();
 
   // Disconnect from Golem Network
-  await glm.disconnect();
+  // /await glm.disconnect();
 
   console.log('Disconnected from Golem Network.');
 

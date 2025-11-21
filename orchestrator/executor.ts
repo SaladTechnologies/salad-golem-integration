@@ -1,6 +1,6 @@
 import { OfferProposalFilterFactory } from '@golem-sdk/golem-js';
 import { plansDb, pricesDb, nodesDb } from './db.js';
-import { glm, shutdown } from './glm.js';
+import { shutdown, createGolemClient } from './glm.js';
 import { getNodeState } from './matrix.js';
 import { ethers } from 'ethers';
 import { logger } from './logger.js';
@@ -132,6 +132,9 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 
   const glmEnvPerHourPrice = currentJob.usd_per_hour / glmPrice.price_usd;
 
+  const glm = createGolemClient();
+  await glm.connect();
+
   // Prepare the node definition for provisioning
   const node: Node = {
     name: `node-${initialJob.node_id}`,
@@ -194,7 +197,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
   // Integrate with Golem Network to run the job
   let rental: any;
   try {
-    const rentHours = Math.round((currentJob.adjusted_duration / (1000 * 60 * 60)) * 10) / 10
+    const rentHours = Math.ceil((currentJob.adjusted_duration / (1000 * 60 * 60)) * 10) / 10
     logger.info(`Requesting rental for ${rentHours} hours with env per hour price: ${glmEnvPerHourPrice.toFixed(6)} GLM/hour`);
 
     rental = await glm.oneOf({
@@ -233,10 +236,22 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       }
     );
 
-    remoteProcess.stdout.subscribe((data: string) => console.log(`${currentJob!.node_id} stdout>`, data));
-    remoteProcess.stderr.subscribe((data: string) => console.error(`${currentJob!.node_id} stderr>`, data));
+    // Track start time
+    const startTime = Date.now();
 
-    const runtimeTimeout = Math.round(currentJob.adjusted_duration * 1.02);
+    remoteProcess.stdout.subscribe((data: string) => {
+      data = data.replace(/[\r\n]+/g, ' ');
+      logger.info(`${currentJob!.node_id} stdout> ${data}`);
+      if (data.includes('completed') || data.includes('interrupted')) {
+        const endTime = Date.now();
+        const actualDuration = endTime - startTime;
+        logger.info(`Job for node_id=${currentJob!.node_id} reported ${data}. Expected duration: ${currentJob!.adjusted_duration} ms, Actual duration: ${actualDuration} ms`);
+      }
+    });
+
+    remoteProcess.stderr.subscribe((data: string) => logger.error(`${currentJob!.node_id} stderr> ${data}`));
+
+    const runtimeTimeout = Math.round(currentJob.adjusted_duration + 5 * 60 * 1000); // add 5 minutes buffer
     logger.info(`Executing job with runtime timeout ${runtimeTimeout} ms`);
 
     await remoteProcess.waitForExit(runtimeTimeout);
@@ -248,9 +263,14 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     clearTimeout(timeoutId);
     shutdown.signal.removeEventListener('abort', shutdownListener);
     if (rental) await rental.stopAndFinalize();
+    await glm.disconnect();
   }
 
   logger.info(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
+
+  // Wait for 30 seconds before deprovisioning
+  logger.info(`Waiting for 30 seconds before deprovisioning node_id=${initialJob.node_id}`);
+  await new Promise(resolve => setTimeout(resolve, 30 * 1000));
 
   // Deprovision provider from K8s cluster
   try {
