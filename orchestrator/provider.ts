@@ -1,4 +1,5 @@
 import { CoreV1Api, V1Secret, V1ConfigMap, V1Pod } from '@kubernetes/client-node';
+import fs from 'fs/promises';
 
 export interface Node {
   name: string;
@@ -53,6 +54,11 @@ export async function deprovisionNode(
   } catch (err) {
     // Ignore if not found
   }
+}
+
+export async function exportPodLogs(k8sApi: CoreV1Api, podName: string, namespace: string, filePath: string) {
+  const res = await k8sApi.readNamespacedPodLog({ name: podName, namespace });
+  await fs.writeFile(filePath, res);
 }
 
 /**

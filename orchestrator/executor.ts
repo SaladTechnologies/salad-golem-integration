@@ -1,6 +1,6 @@
 import { OfferProposalFilterFactory } from '@golem-sdk/golem-js';
-import { plansDb, pricesDb, nodesDb } from './db.js';
-import { shutdown, createGolemClient } from './glm.js';
+import { pricesDb, nodesDb } from './db.js';
+import { glm, shutdown } from './glm.js';
 import { getNodeState } from './matrix.js';
 import { ethers } from 'ethers';
 import { logger } from './logger.js';
@@ -132,15 +132,13 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
 
   const glmEnvPerHourPrice = currentJob.usd_per_hour / glmPrice.price_usd;
 
-  const glm = createGolemClient();
-  await glm.connect();
-
   // Prepare the node definition for provisioning
   const node: Node = {
     name: `node-${initialJob.node_id}`,
     environment: {
       NODE_NAME: `node-${initialJob.node_id}`,
       SUBNET: "public",
+      RUST_LOG: "debug",
       YA_ACCOUNT: config.get<string>("yagnaAccount"),
       YA_PAYMENT_NETWORK_GROUP: "mainnet",
       YA_NET_TYPE: "central",
@@ -203,6 +201,9 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     rental = await glm.oneOf({
       order: {
         demand: {
+          payment: {
+            midAgreementDebitNoteIntervalSec: 1200 // 20 minutes
+          },
           workload: {
             runtime: {
               name: "salad",
@@ -211,7 +212,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
           },
         },
         market: {
-          rentHours: rentHours,
+          rentHours: 4.0,
           pricing: {
             model: "linear",
             maxStartPrice: 0.0,
@@ -239,20 +240,25 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     // Track start time
     const startTime = Date.now();
 
-    remoteProcess.stdout.subscribe((data: string) => {
+    remoteProcess.stdout.subscribe(async (data: string) => {
       data = data.replace(/[\r\n]+/g, ' ');
       logger.info(`${currentJob!.node_id} stdout> ${data}`);
       if (data.includes('completed') || data.includes('interrupted')) {
         const endTime = Date.now();
         const actualDuration = endTime - startTime;
         logger.info(`Job for node_id=${currentJob!.node_id} reported ${data}. Expected duration: ${currentJob!.adjusted_duration} ms, Actual duration: ${actualDuration} ms`);
+        if (actualDuration < currentJob!.adjusted_duration) {
+          // Calculate percentage of time completed
+          const percentComplete = (actualDuration / currentJob!.adjusted_duration) * 100;
+          logger.warn(`Job for node_id=${currentJob!.node_id} finished earlier than expected at ${percentComplete.toFixed(2)}% of expected time.`);
+        }
       }
     });
 
     remoteProcess.stderr.subscribe((data: string) => logger.error(`${currentJob!.node_id} stderr> ${data}`));
 
     const runtimeTimeout = Math.round(currentJob.adjusted_duration + 5 * 60 * 1000); // add 5 minutes buffer
-    logger.info(`Executing job with runtime timeout ${runtimeTimeout} ms`);
+    logger.info(`Executing job on ${currentJob.node_id} with runtime timeout ${runtimeTimeout} ms`);
 
     await remoteProcess.waitForExit(runtimeTimeout);
   } catch (err) {
@@ -263,14 +269,13 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     clearTimeout(timeoutId);
     shutdown.signal.removeEventListener('abort', shutdownListener);
     if (rental) await rental.stopAndFinalize();
-    await glm.disconnect();
   }
 
   logger.info(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
 
-  // Wait for 30 seconds before deprovisioning
-  logger.info(`Waiting for 30 seconds before deprovisioning node_id=${initialJob.node_id}`);
-  await new Promise(resolve => setTimeout(resolve, 30 * 1000));
+  // Wait for 15 seconds before deprovisioning
+  logger.info(`Waiting for 15 seconds before deprovisioning node_id=${initialJob.node_id}`);
+  await new Promise(resolve => setTimeout(resolve, 15 * 1000));
 
   // Deprovision provider from K8s cluster
   try {
@@ -281,8 +286,6 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     logger.error(`Error deprovisioning node_id=${initialJob.node_id}`);
     console.log(error);
   }
-
-  logger.info(`All jobs for plan_id=${initialJob.node_plan_id} completed.`);
 }
 
 // Ensure the Pod is ready by deprovisioning any existing Pod and provisioning a new one

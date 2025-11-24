@@ -10,7 +10,7 @@ process.on('SIGINT', () => shutdownHandler('SIGINT'));
 process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
 
 // Connect to Golem Network
-//await glm.connect();
+await glm.connect();
 
 // Initial plan processing on startup
 await processPlans();
@@ -26,14 +26,14 @@ async function shutdownHandler(signal: string) {
   shutdown.abort();
 
   // Disconnect from Golem Network
-  // /await glm.disconnect();
+  await glm.disconnect();
 
   console.log('Disconnected from Golem Network.');
 
   // Deprovision all active provider nodes
   for (const [planKey] of activePlans) {
     try {
-      logger.info(`Devprovisioning provider node-${planKey} during shutdown...`);
+      logger.info(`Deprovisioning provider node-${planKey} during shutdown...`);
       await deprovisionNode(k8sApi, k8sProviderNamespace, { name: `node-${planKey}`, environment: {}, presets: {}, offerTemplate: {} });
       logger.info(`Deprovisioned provider node-${planKey} during shutdown.`);
     } catch (err) {
