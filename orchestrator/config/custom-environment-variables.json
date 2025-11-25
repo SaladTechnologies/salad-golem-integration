@@ -1,0 +1,7 @@
+{
+  "apiKey": "API_KEY",
+  "kubeConfigPath": "KUBE_CONFIG_PATH",
+  "matrixApiKey": "MATRIX_API_KEY",
+  "matrixApiUrl": "MATRIX_API_URL",
+  "yagnaAccount": "YAGNA_ACCOUNT"
+}
