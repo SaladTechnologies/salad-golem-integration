@@ -30,6 +30,9 @@ export async function fetchMixpanelJql() {
   // Get the previous two day ranges
   const ranges = getPreviousDayRanges(2);
 
+  // Create the folder if it doesn't exist
+      await fs.mkdir(`${config.get('dataDirectory')}/imported`, { recursive: true });
+
   for (const { filename, start, end } of ranges) {
     // If the file already exists in the imported folder, skip it
     try {
@@ -67,6 +70,9 @@ export async function fetchMixpanelJql() {
 
     const response = await fetch(url, options);
     const data = await response.json();
+
+    // Create the folder if it doesn't exist
+    await fs.mkdir(`${config.get('dataDirectory')}/pending`, { recursive: true });
 
     // Write the JSON into the pending folder
     await fs.writeFile(`${config.get('dataDirectory')}/pending/${filename}`, JSON.stringify(data, null, 2), 'utf-8');
