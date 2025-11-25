@@ -202,7 +202,7 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       order: {
         demand: {
           payment: {
-            midAgreementDebitNoteIntervalSec: 1200 // 20 minutes
+            midAgreementDebitNoteIntervalSec: 1800 // 30 minutes
           },
           workload: {
             runtime: {
