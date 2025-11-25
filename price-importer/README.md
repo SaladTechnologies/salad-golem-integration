@@ -13,7 +13,7 @@ This project imports price data using Node.js and supports configuration via env
    ```powershell
    docker run --rm -it \
      -e COINMARKETCAP_API_KEY=your_api_key_here \
-     -e DATABASE_FILE_PATH=path-to-data-file \
+     -e DATABASE_FILE_PATH=/app/data/prices.db \
      price-importer
    ```
    Replace `your_api_key_here` with your actual CoinMarketCap API key.

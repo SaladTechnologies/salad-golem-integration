@@ -22,7 +22,6 @@ docker run \
 	-e PLANS_DATABASE_FILE_PATH=/app/data/plans.db \
 	-e PRICES_DATABASE_FILE_PATH=/app/data/prices.db \
 	-e YAGNA_ACCOUNT=your-yagna-account \
-	-v /host/data:/app/data \
 	orchestrator-app
 ```
 

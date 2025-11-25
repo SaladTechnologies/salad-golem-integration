@@ -51,9 +51,9 @@ node123,1698600000,1698603600,10.5,RTX3090
 2. **Run the container:**
    ```sh
    docker run --rm \
-     -e DATA_DIRECTORY=/path/to/data \
+     -e DATA_DIRECTORY=/app/data \
      -e MIXPANEL_API_KEY=your_mixpanel_api_key \
-     -e PLANS_DATABASE_FILE_PATH=/path/to/data/plans.db \
+     -e PLANS_DATABASE_FILE_PATH=/app/data/plans.db \
      plan-importer
    ```
 
