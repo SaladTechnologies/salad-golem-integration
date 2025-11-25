@@ -2,6 +2,7 @@ import { promises as fsp } from 'fs';
 import config from 'config';
 import timespan from 'timespan-parser';
 import { plansDb } from './db.mjs';
+import { logger } from './logger.mjs';
 
 // JSON array keys
 const JSON_KEYS = {
@@ -72,11 +73,11 @@ async function importPlans() {
 
   // Read JSON files
   const files = (await fsp.readdir(pendingDir)).filter(f => f.endsWith('.json'));
-  console.log(`Found ${files.length} JSON files to process.`);
+  logger.info(`Found ${files.length} JSON files to process.`);
 
   // Process each JSON file
   for (const jsonFile of files) {
-    console.log(`Processing file: ${jsonFile}`);
+    logger.info(`Processing file: ${jsonFile}`);
     const jsonFilePath = `${pendingDir}/${jsonFile}`;
     let importSuccess = true;
 
@@ -200,12 +201,12 @@ async function importPlans() {
         await insertPlan.finalize();
         await insertJob.finalize();
         await plansDb.run('COMMIT');
-        console.log(`${jsonFile} successfully processed and rows inserted efficiently`);
+        logger.info(`${jsonFile} successfully processed and rows inserted efficiently`);
         // Move file to imported/
         await fsp.rename(jsonFilePath, `${importedDir}/${jsonFile}`);
       } catch (err) {
         await plansDb.run('ROLLBACK');
-        console.error(`Error importing ${jsonFile}:`, err);
+        logger.error(`Error importing ${jsonFile}:`, err);
 
         // Move file to failed/
         await fsp.rename(jsonFilePath, `${failedDir}/${jsonFile}`);

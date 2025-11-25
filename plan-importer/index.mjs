@@ -1,6 +1,7 @@
 import { fetchMixpanelJql } from './mixpanel.mjs';
 import { importPlans } from './planner.mjs';
 import { plansDb } from './db.mjs';
+import { logger } from './logger.mjs';
 
 // Handle graceful shutdown
 process.on('SIGINT', () => shutdownHandler('SIGINT'));

@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import config from 'config';
+import { logger } from './logger.mjs';
 
 // Function to fetch data from MixPanel JQL API for the previous two days
 export async function fetchMixpanelJql() {
@@ -34,13 +35,13 @@ export async function fetchMixpanelJql() {
     try {
       const importedPath = `${config.get('dataDirectory')}/imported/${filename}`;
       await fs.access(importedPath);
-      console.log(`File ${filename} already exists in imported folder. Skipping.`);
+      logger.info(`File ${filename} already exists in imported folder. Skipping.`);
       continue;
     } catch (err) {
-      // File does not exist in imported, continue
+      logger.info(`File ${filename} does not exist in imported folder. Proceeding to fetch.`);
     }
 
-    console.log(`Fetching data for ${filename} from MixPanel JQL API...`);
+    logger.info(`Fetching data for ${filename} from MixPanel JQL API...`);
 
     // Read in the JQL query from a file
     const jqlQuery = await fs.readFile('./jql/earnings-query.jql', 'utf-8');
