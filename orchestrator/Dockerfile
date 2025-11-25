@@ -35,6 +35,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 # Copy the project files
+COPY --from=build /app/config /app/config
 COPY --from=build /app/dist /app/dist
 
 # Start the app
