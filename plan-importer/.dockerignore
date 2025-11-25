@@ -1,2 +1,7 @@
-node_modules/
+.dockerignore
+.editorconfig
+.gitignore
 config/development.json
+Dockerfile
+node_modules
+README.md

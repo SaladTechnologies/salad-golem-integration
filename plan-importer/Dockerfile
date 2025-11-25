@@ -1,5 +1,5 @@
 # Use official Node.js LTS image
-FROM node:20-alpine
+FROM node:24-alpine
 
 # Set working directory
 WORKDIR /app
@@ -7,12 +7,14 @@ WORKDIR /app
 # Create data directory
 RUN mkdir -p /app/data
 
-# Copy package files and install dependencies
-COPY package.json package-lock.json* ./
+# Copy package.json and package-lock.json (if present)
+COPY package*.json ./
+
+# Install dependencies
 RUN npm install --production
 
-# Copy source files
+# Copy the project files
 COPY . .
 
-# Command to run the app (edit if needed)
+# Start the app
 CMD ["node", "index.mjs"]
