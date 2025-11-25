@@ -1,3 +1,4 @@
 {
-  "apiKey": "COINMARKETCAP_API_KEY"
+  "apiKey": "COINMARKETCAP_API_KEY",
+  "databaseFilePath": "DATABASE_FILE_PATH"
 }

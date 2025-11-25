@@ -12,7 +12,7 @@ RUN npm install --production
 COPY . .
 
 # Set environment variables (optional)
-# ENV NODE_ENV=production
+ENV NODE_ENV=production
 
 # Command to run the app (edit if needed)
 CMD ["node", "index.mjs"]

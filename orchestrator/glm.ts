@@ -12,6 +12,7 @@ export function createGolemClient<GolemNetwork>() {
   return new GolemNetwork({
     logger: pinoPrettyLogger({ level: "info" }),
     api: {
+      url: config.get<string>("apiUrl"),
       key: config.get<string>("apiKey")
     },
     payment: {

@@ -76,7 +76,7 @@ export async function processPlans(): Promise<void> {
     }
 
     // Check organization whitelist
-    if (organizationWhitelist.length > 0 && !organizationWhitelist.includes(job.org_name)) {
+    if (!organizationWhitelist.includes(job.org_name)) {
       logger.debug(`Organization ${job.org_name} is not in the whitelist. Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
       continue;
     }

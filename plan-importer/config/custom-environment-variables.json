@@ -1,3 +1,5 @@
 {
-  "mixPanelApiKey": "MIXPANEL_API_KEY"
+  "dataDirectory": "DATA_DIRECTORY",
+  "mixPanelApiKey": "MIXPANEL_API_KEY",
+  "plansDatabaseFilePath": "PLANS_DATABASE_FILE_PATH"
 }

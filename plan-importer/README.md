@@ -39,6 +39,51 @@ node123,1698600000,1698603600,10.5,RTX3090
 - SQLite
 - Required npm packages (see package.json)
 
+---
+
+## Running with Docker
+
+1. **Build the Docker image:**
+   ```sh
+   docker build -t plan-importer .
+   ```
+
+2. **Run the container:**
+   ```sh
+   docker run --rm \
+     -e DATA_DIRECTORY=/path/to/data \
+     -e MIXPANEL_API_KEY=your_mixpanel_api_key \
+     -e PLANS_DATABASE_FILE_PATH=/path/to/data/plans.db \
+     plan-importer
+   ```
+
+## Required Environment Variables
+
+These environment variables must be set for the app to run:
+
+- `DATA_DIRECTORY`: Path to the data directory used by the importer.
+- `MIXPANEL_API_KEY`: API key for Mixpanel integration.
+- `PLANS_DATABASE_FILE_PATH`: Path to the plans database file.
+
+You can set these variables in your shell, in a `.env` file, or directly in the Docker run command as shown above.
+
+## Project Structure
+- `index.mjs` — Main entry point
+- `planner.mjs` — Plan import logic
+- `db.mjs` — Database logic
+- `config/` — Configuration files
+- `jql/` — JQL query files
+- `Dockerfile` — Docker configuration
+
+## Example
+```sh
+docker run --rm \
+  -e DATA_DIRECTORY=/data \
+  -e MIXPANEL_API_KEY=abc123 \
+  -e PLANS_DATABASE_FILE_PATH=/data/plans.db \
+  plan-importer
+```
+
 ## Notes
 - Only files in `data/pending` are processed.
 - Files are moved to `imported` or `failed` after processing.
