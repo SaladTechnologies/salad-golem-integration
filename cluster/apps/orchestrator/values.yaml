@@ -1,0 +1,138 @@
+hull:
+  config:
+    general:
+      metadata:
+        labels:
+          common:
+            app.kubernetes.io/part-of: golem-network
+            app.kubernetes.io/version: _HT*hull.config.specific.tag
+    specific:
+      matrix_api_url: https://matrix-rest-api.salad.com
+      organizations_array: '["realfake"]'
+      storage_class_name: do-block-storage
+      tag: "02bd621"
+      yagna_account: "0x57123711a7dc9731458fc6b06df23a7a5d871fba"
+      yagna_api_key: "15155534c5cc4bfe9cca9717a5e1873d"
+      yagna_api_url: http://requestor-15155534c5cc4bfe9cca9717a5e1873d-0.requestor-15155534c5cc4bfe9cca9717a5e1873d.golem-requestors.svc.cluster.local:7465
+  objects:
+    secret:
+      orchestrator-env:
+        data:
+          MATRIX_API_KEY:
+            path: secrets/matrixApiKey.txt
+      plan-importer-env:
+        data:
+          MIXPANEL_API_KEY:
+            path: secrets/mixpanelApiKey.txt
+      price-importer-env:
+        data:
+          COINMARKETCAP_API_KEY:
+            path: secrets/coinmarketcapApiKey.txt
+    statefulset:
+      orchestrator:
+        minReadySeconds: 60
+        pod:
+          containers:
+            orchestrator:
+              env:
+                API_KEY:
+                  value: _HT*hull.config.specific.yagna_api_key
+                API_URL:
+                  value: _HT*hull.config.specific.yagna_api_url
+                MATRIX_API_URL:
+                  value: _HT*hull.config.specific.matrix_api_url
+                NODES_DATABASE_FILE_PATH:
+                  value: /app/data/nodes.db
+                ORGANIZATION_WHITELIST:
+                  value: _HT*hull.config.specific.organizations_array
+                PLANS_DATABASE_FILE_PATH:
+                  value: /app/data/plans.db
+                PRICES_DATABASE_FILE_PATH:
+                  value: /app/data/prices.db
+                yagna_account:
+                  value: _HT*hull.config.specific.yagna_account
+              envFrom:
+                orchestrator-env:
+                  secretRef:
+                    name: orchestrator-env
+              image:
+                registry: docker.io
+                repository: saladtechnologies/golem-orchestrator
+                tag: _HT*hull.config.specific.tag
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+              volumeMounts:
+                data-pvc:
+                  mountPath: /app/data/
+                  name: data-pvc
+            plan-importer:
+              env:
+                DATA_DIRECTORY:
+                  value: /app/data
+                PLANS_DATABASE_FILE_PATH:
+                  value: /app/data/plans.db
+              envFrom:
+                plan-importer-env:
+                  secretRef:
+                    name: plan-importer-env
+              image:
+                registry: docker.io
+                repository: saladtechnologies/golem-plan-importer
+                tag: _HT*hull.config.specific.tag
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+              volumeMounts:
+                data-pvc:
+                  mountPath: /app/data/
+                  name: data-pvc
+            price-importer:
+              env:
+                DATABASE_FILE_PATH:
+                  value: /app/data/prices.db
+              envFrom:
+                price-importer-env:
+                  secretRef:
+                    name: price-importer-env
+              image:
+                registry: docker.io
+                repository: saladtechnologies/golem-price-importer
+                tag: _HT*hull.config.specific.tag
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+              volumeMounts:
+                data-pvc:
+                  mountPath: /app/data/
+                  name: data-pvc
+          terminationGracePeriodSeconds: 60
+        replicas: 1
+        revisionHistoryLimit: 1
+        serviceName: _HT^orchestrator
+        updateStrategy:
+          rollingUpdate:
+            maxUnavailable: 1
+            partition: 0
+          type: RollingUpdate
+        volumeClaimTemplates:
+          - metadata:
+              name: data-pvc
+            spec:
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 1Gi
+              storageClassName: _HT*hull.config.specific.storage_class_name
