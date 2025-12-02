@@ -1,0 +1,26 @@
+config:
+  inputs: |
+    [INPUT]
+        Name tail
+        Path /var/log/containers/*.log
+        multiline.parser docker, cri
+        Tag kube.*
+        Mem_Buf_Limit 5MB
+        Skip_Long_Lines On
+  outputs: |
+    [OUTPUT]
+        Name            http
+        Match           *
+        Host            us-east-1.aws.edge.axiom.co
+        Port            443
+        URI             /v1/ingest/k8s-golem
+        Header          Authorization Bearer ${AXIOM_API_TOKEN}
+        Compress        gzip
+        Format          json
+        Json_date_key   _time
+        Json_date_format iso8601
+        Retry_Limit     False
+        tls             On
+envFrom:
+  - secretRef:
+      name: fluent-bit-env
