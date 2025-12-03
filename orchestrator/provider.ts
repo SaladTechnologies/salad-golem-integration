@@ -1,4 +1,4 @@
-import { CoreV1Api, V1Secret, V1ConfigMap, V1Pod } from '@kubernetes/client-node';
+import { CoreV1Api, V1Secret, V1ConfigMap, V1Pod, Exec } from '@kubernetes/client-node';
 import fs from 'fs/promises';
 
 export interface Node {
@@ -56,9 +56,28 @@ export async function deprovisionNode(
   }
 }
 
-export async function exportPodLogs(k8sApi: CoreV1Api, podName: string, namespace: string, filePath: string) {
+/**
+ * Exports the logs of a Pod to a specified file.
+ */
+export async function exportPodLogs(
+  k8sApi: CoreV1Api,
+  podName: string,
+  namespace: string,
+  filePath: string
+) {
   const res = await k8sApi.readNamespacedPodLog({ name: podName, namespace });
   await fs.writeFile(filePath, res);
+}
+
+/**
+ * Restarts a container by issuing a kill command to the container.
+ */
+export async function restartContainer(
+  k8sApi: CoreV1Api,
+  podName: string,
+  namespace: string
+) {
+  // Execute a command to kill the main process in the container
 }
 
 /**

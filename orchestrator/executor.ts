@@ -9,8 +9,17 @@ import { k8sApi, k8sProviderNamespace } from './k8s.js';
 import config from 'config';
 import { ApiException } from '@kubernetes/client-node';
 
+// Track job failures keyed by org_name
+const jobFailures: Map<string, JobFailure[]> = new Map();
+
+interface JobFailure {
+  timestamp: number;
+  reason: string;
+}
+
 interface Job {
   node_id: string;
+  org_name: string;
   gpu_class_id: string;
   node_plan_id: string;
   order_index: number;
@@ -243,14 +252,23 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     remoteProcess.stdout.subscribe(async (data: string) => {
       data = data.replace(/[\r\n]+/g, ' ');
       logger.info(`${currentJob!.node_id} stdout> ${data}`);
+
+      // Check for completion or interruption messages
       if (data.includes('completed') || data.includes('interrupted')) {
         const endTime = Date.now();
         const actualDuration = endTime - startTime;
         logger.info(`Job for node_id=${currentJob!.node_id} reported ${data}. Expected duration: ${currentJob!.adjusted_duration} ms, Actual duration: ${actualDuration} ms`);
+
+        // Check if job finished earlier than expected
         if (actualDuration < currentJob!.adjusted_duration) {
           // Calculate percentage of time completed
           const percentComplete = (actualDuration / currentJob!.adjusted_duration) * 100;
           logger.warn(`Job for node_id=${currentJob!.node_id} finished earlier than expected at ${percentComplete.toFixed(2)}% of expected time.`);
+
+          // Record job failure if less than 50% complete
+          if (percentComplete < 50) {
+            trackJobFailure(currentJob!.org_name, `Job finished early at ${percentComplete.toFixed(2)}% of expected time`);
+          }
         }
       }
     });
@@ -286,6 +304,20 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
     logger.error(`Error deprovisioning node_id=${initialJob.node_id}`);
     console.log(error);
   }
+}
+
+// Function to track job failure for an organization
+function trackJobFailure(orgName: string, reason: string) {
+  // Get existing failures for the org
+  const failures = jobFailures.get(orgName) || [];
+  failures.push({ timestamp: Date.now(), reason });
+
+  // Remove job failures older than 30 minutes
+  const thirtyMinutesAgo = Date.now() - (30 * 60 * 1000);
+  const recentFailures = failures.filter(failure => failure.timestamp >= thirtyMinutesAgo);
+  jobFailures.set(orgName, recentFailures);
+
+  return recentFailures;
 }
 
 // Ensure the Pod is ready by deprovisioning any existing Pod and provisioning a new one
