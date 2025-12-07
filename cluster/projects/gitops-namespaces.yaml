@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: gitops-namespaces
+  namespace: argocd
+spec:
+  clusterResourceWhitelist:
+    - group: ""
+      kind: "Namespace"
+  description: "GitOps project containing the cluster resources"
+  destinations:
+    - name: in-cluster
+      namespace: "*"
+  namespaceResourceBlacklist:
+    - group: "*"
+      kind: "*"
+  sourceRepos:
+    - https://github.com/SaladTechnologies/salad-golem-integration.git
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100000"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: namespaces
+  name: namespaces
+  namespace: argocd
+spec:
+  destination:
+    name: in-cluster
+    namespace: default
+  info:
+    - name: SaladTechnologies/salad-golem-integration
+      value: https://github.com/SaladTechnologies/salad-golem-integration/
+  project: gitops-namespaces
+  source:
+    path: cluster/namespaces
+    repoURL: https://github.com/SaladTechnologies/salad-golem-integration.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      allowEmpty: true
+      prune: true
+      selfHeal: true

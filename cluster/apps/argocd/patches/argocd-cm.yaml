@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  exec.enabled: "true"
+  helm.enabled: "true"
+  helm.valuesFileSchemes: https
+  help.chatText: "DevOps Support"
+  help.chatUrl: "https://saladtech.slack.com/channels/devops"
+  jsonnet.enabled: "false"
+  kustomize.enabled: "true"
+  resource.customizations.ignoreDifferences.apps_Deployment: |
+    jqPathExpressions:
+      - .spec.template.metadata.annotations."kubectl.kubernetes.io/restartedAt"
+      - if (.spec.template.metadata.annotations | keys | length) == 0 then .spec.template.metadata.annotations else empty end

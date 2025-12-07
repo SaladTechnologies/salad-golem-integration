@@ -2,6 +2,7 @@
   "recommendations": [
     "editorconfig.editorconfig",
     "esbenp.prettier-vscode",
+    "hashicorp.terraform",
     "ms-kubernetes-tools.vscode-kubernetes-tools",
     "ms-vscode.powershell",
     "ms-vsliveshare.vsliveshare",

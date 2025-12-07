@@ -4,6 +4,9 @@
   "editor.minimap.maxColumn": 120,
   "editor.renderWhitespace": "all",
   "editor.rulers": [120],
+  "files.associations": {
+    "*.hcl": "terraform"
+  },
   "git.branchProtection": ["main", "master"],
   "powershell.codeFormatting.addWhitespaceAroundPipe": true,
   "powershell.codeFormatting.alignPropertyValuePairs": false,
@@ -39,6 +42,12 @@
   },
   "[powershell]": {
     "editor.defaultFormatter": "ms-vscode.powershell"
+  },
+  "[terraform]": {
+    "editor.defaultFormatter": "hashicorp.terraform"
+  },
+  "[terraform-vars]": {
+    "editor.defaultFormatter": "hashicorp.terraform"
   },
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
