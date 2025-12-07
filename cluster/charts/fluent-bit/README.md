@@ -7,7 +7,7 @@ This folder contains instructions for the Helm chart used to deploy Fluent Bit f
 Before deploying the Helm chart, create a Kubernetes Secret to securely store the Axiom API token:
 
 ```sh
-kubectl create secret generic fluent-bit-env --from-literal=AXIOM_API_TOKEN=token --namespace golem-infrastructure
+kubectl create secret generic fluent-bit-env --from-literal=AXIOM_API_TOKEN=token --namespace fluent-bit
 ```
 
 Replace `token` with your real Axiom API token. This secret will be referenced by the Fluent Bit configuration for authentication.
@@ -31,7 +31,7 @@ To install Fluent Bit in your Kubernetes cluster using the official Helm chart:
 3. **Install Fluent Bit using Helm:**
 
    ```sh
-   helm upgrade --install fluent-bit fluent/fluent-bit -f values.yaml --namespace golem-infrastructure
+   helm upgrade --install fluent-bit fluent/fluent-bit -f values.yaml --namespace fluent-bit
    ```
 
 This will deploy Fluent Bit as a DaemonSet, ensuring it runs on every node in your cluster and collects logs from all pods.

@@ -23,11 +23,11 @@ try {
         # Deploy orchestrator
         Write-Host -Object 'Deploying orchestrator...' -ForegroundColor Green
 
-        Write-Host -Object ('helm upgrade --hide-notes --history-max 1 --install --namespace golem-infrastructure ' +
-            '--reset-values prod .') -ForegroundColor Cyan
-        if ($PSCmdlet.ShouldProcess('helm upgrade --hide-notes --history-max 1 --install --namespace ' +
-                'golem-infrastructure --reset-values prod .', '', '')) {
-            & helm upgrade --hide-notes --history-max 1 --install --namespace golem-infrastructure --reset-values prod .
+        Write-Host -Object ('helm upgrade --hide-notes --history-max 1 --install --namespace golem --reset-values ' +
+            'prod .') -ForegroundColor Cyan
+        if ($PSCmdlet.ShouldProcess('helm upgrade --hide-notes --history-max 1 --install --namespace golem ' +
+                '--reset-values prod .', '', '')) {
+            & helm upgrade --hide-notes --history-max 1 --install --namespace golem --reset-values prod .
         }
     }
     finally {

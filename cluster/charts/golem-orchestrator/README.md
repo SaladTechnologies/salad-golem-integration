@@ -7,7 +7,7 @@ This folder contains the Helm chart used to deploy the Golem Network orchestrato
 To preview the Helm chart, run the following command:
 
 ```pwsh
-helm template --namespace golem-infrastructure --release-name example .
+helm template --namespace golem --release-name example .
 ```
 
 ## Configuring

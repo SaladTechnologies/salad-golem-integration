@@ -141,8 +141,10 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       RUST_LOG: "debug",
       YA_ACCOUNT: config.get<string>("yagnaAccount"),
       YA_PAYMENT_NETWORK_GROUP: "mainnet",
-      YA_NET_TYPE: "central",
-      CENTRAL_NET_HOST: "polygongas.org:7999",
+      // YA_NET_TYPE: "central",
+      // CENTRAL_NET_HOST: "polygongas.org:7999",
+      YA_NET_TYPE: "hybrid",
+      YA_NET_RELAY_HOST: "relay-net1-0.relay-net1.golem-requestors.svc.cluster.local:7477",
       YAGNA_AUTOCONF_ID_SECRET: wallet.privateKey.substring(2) // remove '0x' prefix
     },
     offerTemplate: {

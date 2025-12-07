@@ -11,8 +11,10 @@ hull:
       busybox_tag: "1.37"
       max_polygon_gas_fee: "1000"
       storage_class_name: do-block-storage
-      yagna_network: polygongas.org:7999
-      yagna_network_type: central
+      # yagna_network: polygongas.org:7999
+      # yagna_network_type: central
+      yagna_network: relay-net1-0.relay-net1.golem-requestors.svc.cluster.local:7477
+      yagna_network_type: hybrid
       yagna_tag: v0.17.6-1
   objects:
     secret:
@@ -71,10 +73,12 @@ hull:
                 - service
                 - run
               env:
-                CENTRAL_NET_HOST:
-                  value: _HT*hull.config.specific.yagna_network
+                # CENTRAL_NET_HOST:
+                #   value: _HT*hull.config.specific.yagna_network
                 POLYGON_MAX_FEE_PER_GAS:
                   value: _HT*hull.config.specific.max_polygon_gas_fee
+                YA_NET_RELAY_HOST:
+                  value: _HT*hull.config.specific.yagna_network
                 YA_NET_TYPE:
                   value: _HT*hull.config.specific.yagna_network_type
                 YAGNA_API_URL:

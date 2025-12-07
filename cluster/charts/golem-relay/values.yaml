@@ -1,0 +1,58 @@
+hull:
+  config:
+    general:
+      metadata:
+        labels:
+          common:
+            app.kubernetes.io/part-of: golem-network
+            app.kubernetes.io/version: _HT*hull.config.specific.tag
+      rbac: false
+    specific:
+      tag: latest
+  objects:
+    service:
+      relay:
+        clusterIP: None
+        metadataNameOverride: _HT!{{- printf "relay-%s" _HT**Release.Name -}}
+        ports:
+          relay:
+            port: 7477
+            protocol: UDP
+            targetPort: relay
+        staticName: true
+        type: ClusterIP
+    serviceaccount:
+      default:
+        enabled: false
+    statefulset:
+      relay:
+        metadataNameOverride: _HT!{{- printf "relay-%s" _HT**Release.Name -}}
+        minReadySeconds: 60
+        pod:
+          containers:
+            relay:
+              image:
+                registry: docker.io
+                repository: saladtechnologies/golem-relay
+                tag: _HT*hull.config.specific.tag
+              ports:
+                relay:
+                  containerPort: 7477
+                  protocol: UDP
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+                requests:
+                  cpu: 250m
+                  memory: 256Mi
+          terminationGracePeriodSeconds: 60
+        replicas: 1
+        revisionHistoryLimit: 1
+        serviceName: _HT!{{- printf "relay-%s" _HT**Release.Name -}}
+        staticName: true
+        updateStrategy:
+          rollingUpdate:
+            maxUnavailable: 1
+            partition: 0
+          type: RollingUpdate

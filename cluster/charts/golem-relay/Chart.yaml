@@ -1,0 +1,11 @@
+apiVersion: v2
+appVersion: latest
+dependencies:
+  - name: hull
+    repository: "https://vidispine.github.io/hull"
+    version: "1.33.2"
+description: Golem Network Relay
+kubeVersion: ">=1.33.0-0"
+name: golem-relay
+type: application
+version: "0.0.0"
