@@ -3,17 +3,17 @@ kind: AppProject
 metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
-  name: gitops-namespaces
+  name: golem
   namespace: argocd
 spec:
   clusterResourceWhitelist:
-    - group: ""
-      kind: "Namespace"
-  description: "GitOps project containing the cluster namespaces"
+    - group: "*"
+      kind: "*"
+  description: "Salad-Golem Network integration project"
   destinations:
     - name: in-cluster
       namespace: "*"
-  namespaceResourceBlacklist:
+  namespaceResourceWhitelist:
     - group: "*"
       kind: "*"
   sourceRepos:

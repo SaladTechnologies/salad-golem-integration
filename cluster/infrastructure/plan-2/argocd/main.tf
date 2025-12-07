@@ -107,7 +107,7 @@ resource "kubernetes_manifest" "root_proj" {
       namespace = kubernetes_namespace_v1.argocd_ns.metadata[0].name
     }
     spec = {
-      clusterResourceWhitelist = [
+      clusterResourceBlacklist = [
         {
           group = "*"
           kind  = "*"
@@ -117,17 +117,22 @@ resource "kubernetes_manifest" "root_proj" {
       destinations = [
         {
           name      = "in-cluster"
-          namespace = "*"
+          namespace = kubernetes_namespace_v1.argocd_ns.metadata[0].name
         }
       ]
       namespaceResourceWhitelist = [
         {
-          group = "*"
-          kind  = "*"
+          group = "argoproj.io/v1alpha1"
+          kind  = "AppProject"
+        },
+        {
+          group = "argoproj.io/v1alpha1"
+          kind  = "Application"
         }
+
       ]
       sourceRepos = [
-        "*"
+        "https://github.com/SaladTechnologies/salad-golem-integration.git"
       ]
     }
   }
@@ -162,16 +167,22 @@ resource "kubernetes_manifest" "root_app" {
         }
       ]
       project = kubernetes_manifest.root_proj.manifest.metadata.name
-      source = {
-        path           = "cluster/projects"
-        repoURL        = "https://github.com/SaladTechnologies/salad-golem-integration.git"
-        targetRevision = "HEAD"
-      }
+      sources = [
+        {
+          path           = "cluster/apps"
+          repoURL        = "https://github.com/SaladTechnologies/salad-golem-integration.git"
+          targetRevision = "HEAD"
+        },
+        {
+          path           = "cluster/projects"
+          repoURL        = "https://github.com/SaladTechnologies/salad-golem-integration.git"
+          targetRevision = "HEAD"
+        }
+      ]
       syncPolicy = {
         automated = {
-          allowEmpty = true
-          prune      = true
-          selfHeal   = true
+          prune    = true
+          selfHeal = true
         }
       }
     }

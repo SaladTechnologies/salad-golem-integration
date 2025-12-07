@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100000"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: argocd
+  name: argocd
+  namespace: argocd
+spec:
+  destination:
+    name: in-cluster
+    namespace: argocd
+  project: gitops-addons
+  source:
+    path: cluster/charts/argocd
+    repoURL: https://github.com/SaladTechnologies/salad-gitops-infra.git
+    targetRevision: HEAD
+  # syncPolicy is explicitly omitted to require manual reviews.
