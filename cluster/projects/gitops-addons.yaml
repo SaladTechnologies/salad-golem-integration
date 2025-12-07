@@ -18,3 +18,4 @@ spec:
       kind: "*"
   sourceRepos:
     - https://github.com/SaladTechnologies/salad-golem-integration.git
+    - https://prometheus-community.github.io/helm-charts
