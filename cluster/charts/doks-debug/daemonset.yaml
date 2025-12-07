@@ -1,0 +1,58 @@
+# https://github.com/digitalocean/doks-debug/blob/6877edf225d70146dccee329cda31ceedfe1ef02/k8s/daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: doks-debug
+  namespace: kube-system
+  labels:
+    app: doks-debug
+spec:
+  selector:
+    matchLabels:
+      name: doks-debug
+  template:
+    metadata:
+      labels:
+        name: doks-debug
+      annotations:
+        clusterlint.digitalocean.com/disabled-checks: "hostpath-volume"
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      hostPID: true
+      hostIPC: true
+      hostNetwork: true
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: doks-debug
+          securityContext:
+            privileged: true
+          image: ghcr.io/digitalocean-packages/doks-debug:latest
+          command: ["sleep", "infinity"]
+          resources:
+            requests:
+              memory: "0"
+              cpu: "0"
+            limits:
+              memory: "500Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: host
+              mountPath: /host
+            - name: containerd
+              mountPath: /run/containerd/containerd.sock
+      terminationGracePeriodSeconds: 0
+      volumes:
+        - name: host
+          hostPath:
+            path: /
+        - name: containerd
+          hostPath:
+            path: /run/containerd/containerd.sock
+            type: Socket
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 100%
+    type: RollingUpdate
