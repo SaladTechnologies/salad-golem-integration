@@ -122,14 +122,17 @@ resource "kubernetes_manifest" "root_proj" {
       ]
       namespaceResourceWhitelist = [
         {
-          group = "argoproj.io/v1alpha1"
-          kind  = "AppProject"
+          group = "argoproj.io"
+          kind  = "Application"
         },
         {
-          group = "argoproj.io/v1alpha1"
-          kind  = "Application"
+          group = "argoproj.io"
+          kind  = "ApplicationSet"
+        },
+        {
+          group = "argoproj.io"
+          kind  = "AppProject"
         }
-
       ]
       sourceRepos = [
         "https://github.com/SaladTechnologies/salad-golem-integration.git"
