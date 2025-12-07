@@ -54,6 +54,13 @@ resource "kustomization_resource" "p0" {
   depends_on = [kubernetes_namespace_v1.argocd_ns]
   for_each   = data.kustomization_build.argocd.ids_prio[0]
 
+  lifecycle {
+    ignore_changes = [
+      manifest,
+      timeouts,
+    ]
+  }
+
   manifest = (
     contains(["_/Secret"], regex("(?P<group_kind>.*/.*)/.*/.*", each.value)["group_kind"])
     ? sensitive(data.kustomization_build.argocd.manifests[each.value])
@@ -67,6 +74,13 @@ resource "kustomization_resource" "p1" {
   depends_on = [kubernetes_namespace_v1.argocd_ns, kustomization_resource.p0]
   for_each   = data.kustomization_build.argocd.ids_prio[1]
 
+  lifecycle {
+    ignore_changes = [
+      manifest,
+      timeouts,
+    ]
+  }
+
   manifest = (
     contains(["_/Secret"], regex("(?P<group_kind>.*/.*)/.*/.*", each.value)["group_kind"])
     ? sensitive(data.kustomization_build.argocd.manifests[each.value])
@@ -79,6 +93,13 @@ resource "kustomization_resource" "p1" {
 resource "kustomization_resource" "p2" {
   depends_on = [kubernetes_namespace_v1.argocd_ns, kustomization_resource.p1]
   for_each   = data.kustomization_build.argocd.ids_prio[2]
+
+  lifecycle {
+    ignore_changes = [
+      manifest,
+      timeouts,
+    ]
+  }
 
   manifest = (
     contains(["_/Secret"], regex("(?P<group_kind>.*/.*)/.*/.*", each.value)["group_kind"])
