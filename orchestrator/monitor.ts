@@ -93,30 +93,36 @@ export async function processPlans(): Promise<void> {
       continue;
     }
 
-    // Kick off the plan
+    // Kick off the plan, staggered by 0-55 seconds to avoid the thundering herd
     logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id})}`);
-    const planPromise = executePlan(job, gpuClassMap)
-      .catch(async (err: any) => {
-        logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
-        console.error(err);
+    const randomDelay = Math.floor(Math.random() * 55000);
+    const planPromise = new Promise<void>((resolve, reject) => {
+      setTimeout(() => {
+        executePlan(job, gpuClassMap)
+          .catch(async (err: any) => {
+            logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
+            console.error(err);
 
-        // Mark plan as failed if not aborted or runtime timeout
-        if (!(err instanceof GolemAbortError || (err instanceof GolemWorkError && err?.previous instanceof GolemTimeoutError))) {
-          failedPlans.add(job.node_plan_id);
-        }
+            // Mark plan as failed if not aborted or runtime timeout
+            if (!(err instanceof GolemAbortError || (err instanceof GolemWorkError && err?.previous instanceof GolemTimeoutError))) {
+              failedPlans.add(job.node_plan_id);
+            }
 
-        // Deprovision the provider node on failure
-        try {
-          logger.info(`Deprovisioning provider node-${job.node_id} during shutdown...`);
-          await deprovisionNode(k8sApi, k8sProviderNamespace, { name: `node-${job.node_id}`, environment: {}, presets: {}, offerTemplate: {} });
-          logger.info(`Deprovisioned provider node-${job.node_id} during shutdown.`);
-        } catch (err) {
-          logger.error(`Error while waiting for provider node-${job.node_id} during shutdown:`);
-        }
-      })
-      .finally(() => {
-        activePlans.delete(job.node_id);
-      });
+            // Deprovision the provider node on failure
+            try {
+              logger.info(`Deprovisioning provider node-${job.node_id} during shutdown...`);
+              await deprovisionNode(k8sApi, k8sProviderNamespace, { name: `node-${job.node_id}`, environment: {}, presets: {}, offerTemplate: {} });
+              logger.info(`Deprovisioned provider node-${job.node_id} during shutdown.`);
+            } catch (err) {
+              logger.error(`Error while waiting for provider node-${job.node_id} during shutdown:`);
+            }
+          })
+          .finally(() => {
+            activePlans.delete(job.node_id);
+          })
+          .then(resolve, reject);
+      }, randomDelay);
+    });
     activePlans.set(job.node_id, planPromise);
   }
 }

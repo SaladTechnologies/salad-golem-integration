@@ -14,7 +14,7 @@
     "@golem-sdk/pino-logger": "1.1.0",
     "@kubernetes/client-node": "1.4.0",
     "config": "4.1.1",
-    "ethers": "6.15.0",
+    "ethers": "6.16.0",
     "pino": "10.1.0",
     "sqlite": "5.1.1",
     "sqlite3": "5.1.7",
