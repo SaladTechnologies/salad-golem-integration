@@ -56,11 +56,6 @@ export async function deprovisionNode(
   }
 }
 
-export async function exportPodLogs(k8sApi: CoreV1Api, podName: string, namespace: string, filePath: string) {
-  const res = await k8sApi.readNamespacedPodLog({ name: podName, namespace });
-  await fs.writeFile(filePath, res);
-}
-
 /**
  * Provisions a Salad Node on the Golem Network by creating its Pod, Secret, and ConfigMaps.
  */

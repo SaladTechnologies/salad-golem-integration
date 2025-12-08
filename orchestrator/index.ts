@@ -4,6 +4,8 @@ import { glm, shutdown } from './glm.js';
 import { logger } from './logger.js';
 import { k8sApi, k8sProviderNamespace } from './k8s.js';
 import { deprovisionNode } from './provider.js';
+import { reapUnusedResources } from './reaper.js';
+import { scheduleTask } from './helpers.js';
 
 // Handle graceful shutdown
 process.on('SIGINT', () => shutdownHandler('SIGINT'));
@@ -17,6 +19,15 @@ await processPlans();
 
 // Schedule plan processing every minute
 let runnerInterval = setInterval(processPlans, 1000 * 60);
+
+// Schedule reaping of unused resources every 2.5 minutes
+scheduleTask(async () => {
+  try {
+    await reapUnusedResources();
+  } catch (err) {
+    logger.error(err, 'Error during unused resource reaping:');
+  }
+}, 1000 * 60 * 2.5);
 
 async function shutdownHandler(signal: string) {
   // Clear interval
