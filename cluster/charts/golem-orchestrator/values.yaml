@@ -10,7 +10,7 @@ hull:
       matrix_api_url: https://matrix-rest-api.salad.com
       organizations_array: '["realfake"]'
       storage_class_name: do-block-storage
-      tag: "282d98f"
+      tag: "8c40218"
       yagna_account: "0x57123711a7dc9731458fc6b06df23a7a5d871fba"
       yagna_api_key: "15155534c5cc4bfe9cca9717a5e1873d"
       yagna_api_url: http://requestor-15155534c5cc4bfe9cca9717a5e1873d-0.requestor-15155534c5cc4bfe9cca9717a5e1873d.golem-requestors.svc.cluster.local:7465
