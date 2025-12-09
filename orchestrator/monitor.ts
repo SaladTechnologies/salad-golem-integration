@@ -87,12 +87,6 @@ export async function processPlans(): Promise<void> {
       continue;
     }
 
-    // Skip if this plan has previously failed
-    if (failedPlans.has(job.node_plan_id)) {
-      logger.debug(`Plan_id=${job.node_plan_id} has previously failed. Skipping.`);
-      continue;
-    }
-
     // Kick off the plan, staggered by 0-55 seconds to avoid the thundering herd
     logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id})}`);
     const randomDelay = Math.floor(Math.random() * 55000);
