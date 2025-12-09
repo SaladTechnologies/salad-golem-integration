@@ -4,12 +4,18 @@
   "kubeConfigPath": "KUBE_CONFIG_PATH",
   "matrixApiKey": "MATRIX_API_KEY",
   "matrixApiUrl": "MATRIX_API_URL",
+  "maxProvidersPerRequestor": "MAX_PROVIDERS_PER_REQUESTOR",
   "nodesDatabaseFilePath": "NODES_DATABASE_FILE_PATH",
   "organizationWhitelist": {
     "__name": "ORGANIZATION_WHITELIST",
     "__format": "json"
   },
   "plansDatabaseFilePath": "PLANS_DATABASE_FILE_PATH",
+  "polygonMaxGasFeeGwei": "POLYGON_MAX_GAS_FEE_GWEI",
   "pricesDatabaseFilePath": "PRICES_DATABASE_FILE_PATH",
+  "requestorWalletKeys": {
+    "__name": "REQUESTOR_WALLET_KEYS",
+    "__format": "json"
+  },
   "yagnaAccount": "YAGNA_ACCOUNT"
 }

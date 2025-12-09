@@ -1,4 +1,4 @@
-import { CoreV1Api, KubeConfig } from '@kubernetes/client-node';
+import { AppsV1Api, CoreV1Api, KubeConfig } from '@kubernetes/client-node';
 import config from 'config';
 
 const kc = new KubeConfig();
@@ -11,4 +11,6 @@ if (kubeConfigPath != null && kubeConfigPath !== '') {
 }
 
 export const k8sApi = kc.makeApiClient(CoreV1Api);
-export const k8sProviderNamespace = config.get<string>('k8sProviderNamespace'); // specify your namespace
+export const k8sAppsApi = kc.makeApiClient(AppsV1Api);
+export const k8sProviderNamespace = config.get<string>('k8sProviderNamespace');
+export const k8sRequestorNamespace = config.get<string>('k8sRequestorNamespace');

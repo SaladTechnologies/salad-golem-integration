@@ -1,6 +1,6 @@
-import { OfferProposalFilterFactory } from '@golem-sdk/golem-js';
+import { GolemNetwork, OfferProposalFilterFactory } from '@golem-sdk/golem-js';
 import { pricesDb, nodesDb } from './db.js';
-import { glm, shutdown } from './glm.js';
+import { shutdown } from './glm.js';
 import { getNodeState } from './matrix.js';
 import { ethers } from 'ethers';
 import { logger } from './logger.js';
@@ -34,7 +34,9 @@ type GpuInfo = {
   PROP_MEM_BANDWIDTH: string;
 };
 
-export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, GpuClass>) {
+export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap: Map<string, GpuClass>) {
+  const glm: GolemNetwork = requestor.client;
+
   // Get node state from Matrix
   const nodeState = await getNodeState(initialJob.node_id);
   if (!nodeState) {
@@ -141,10 +143,8 @@ export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, Gp
       RUST_LOG: "debug",
       YA_ACCOUNT: config.get<string>("yagnaAccount"),
       YA_PAYMENT_NETWORK_GROUP: "mainnet",
-      // YA_NET_TYPE: "central",
-      // CENTRAL_NET_HOST: "polygongas.org:7999",
       YA_NET_TYPE: "hybrid",
-      YA_NET_RELAY_HOST: "relay-net1-0.relay-net1.golem-requestors.svc.cluster.local:7477",
+      YA_NET_RELAY_HOST: requestor.relay,
       YAGNA_AUTOCONF_ID_SECRET: wallet.privateKey.substring(2) // remove '0x' prefix
     },
     offerTemplate: {
