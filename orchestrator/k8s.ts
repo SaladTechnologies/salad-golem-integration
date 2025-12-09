@@ -11,4 +11,5 @@ if (kubeConfigPath != null && kubeConfigPath !== '') {
 }
 
 export const k8sApi = kc.makeApiClient(CoreV1Api);
-export const k8sProviderNamespace = config.get<string>('k8sProviderNamespace'); // specify your namespace
+export const k8sProviderNamespace = config.get<string>('k8sProviderNamespace');
+export const k8sRequestorNamespace = config.get<string>('k8sRequestorNamespace');

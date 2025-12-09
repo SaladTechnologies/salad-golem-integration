@@ -1,6 +1,6 @@
-import { OfferProposalFilterFactory } from '@golem-sdk/golem-js';
+import { GolemNetwork, OfferProposalFilterFactory } from '@golem-sdk/golem-js';
 import { pricesDb, nodesDb } from './db.js';
-import { glm, shutdown } from './glm.js';
+import { shutdown } from './glm.js';
 import { getNodeState } from './matrix.js';
 import { ethers } from 'ethers';
 import { logger } from './logger.js';
@@ -34,7 +34,7 @@ type GpuInfo = {
   PROP_MEM_BANDWIDTH: string;
 };
 
-export async function executePlan(initialJob: Job, gpuClassesMap: Map<string, GpuClass>) {
+export async function executePlan(glm: GolemNetwork, initialJob: Job, gpuClassesMap: Map<string, GpuClass>) {
   // Get node state from Matrix
   const nodeState = await getNodeState(initialJob.node_id);
   if (!nodeState) {

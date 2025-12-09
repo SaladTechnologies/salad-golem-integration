@@ -1,13 +1,19 @@
 import config from 'config';
 import timespan from 'timespan-parser';
+import { ethers } from 'ethers';
 import { logger } from './logger.js';
 import { plansDb } from './db.js';
 import { getGpuClasses } from './matrix.js';
 import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
-import { k8sApi, k8sProviderNamespace } from './k8s.js';
+import { createGolemClient } from './glm.js';
+import { k8sApi, k8sProviderNamespace, k8sRequestorNamespace } from './k8s.js';
 import { getAdjustedNow } from './time.js';
-import { GolemAbortError, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
+import { GolemAbortError, GolemNetwork, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
+import { pinoPrettyLogger } from '@golem-sdk/pino-logger';
+
+// Provisioned requestors
+export let requestors: Map<string, any> = new Map();
 
 // Track active plans to prevent overlapping executions
 export let activePlans = new Map<string, Promise<void>>();
@@ -17,6 +23,48 @@ let failedPlans = new Set<number>();
 
 // Cache GPU classes to minimize API calls
 let gpuClasses: any[] = [];
+
+export async function provisionRequestors() {
+  const walletKeys: string[] = config.get('requestorWalletKeys');
+
+  const requestorPods = await k8sApi.listNamespacedPod({ namespace: k8sRequestorNamespace });
+  const requestorPodNames = requestorPods.items.map(pod => pod.metadata?.name).filter(name => name != null) as string[];
+
+  for (const privateKey of walletKeys) {
+    // Get the public key from the wallet key
+    const wallet = new ethers.Wallet(privateKey);
+    const publicKey = await wallet.getAddress();
+
+    // Check if requestor pod already exists
+    const requestorKey = publicKey.toLowerCase().replace('0x', '');
+    const expectedPodName = `requestor-${requestorKey}`;
+    if (requestorPodNames.includes(expectedPodName)) {
+      logger.info(`Requestor pod for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
+      continue;
+    }
+
+    if (!requestors.has(requestorKey)) {
+      // Provision new requestor
+      logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
+
+      // TODO: Provision the requestor in Kubernetes
+
+      // Create GolemNetwork requestor instance
+      const client = createGolemClient<GolemNetwork>(config.get<string>('apiUrl'), config.get<string>('apiKey'));
+
+      // Connect to Golem Network
+      await client.connect();
+
+      const requestor = {
+        client: client,
+        providerCount: 0
+      };
+
+      requestors.set(requestorKey, requestor);
+      logger.info(`Provisioned requestor for wallet key: ${requestorKey}`);
+    }
+  }
+}
 
 /**
  * Process plans that are due to start.
@@ -87,12 +135,27 @@ export async function processPlans(): Promise<void> {
       continue;
     }
 
+    // Find a requestor with capacity
+    let selectedRequestorKey: string | null = null;
+    for (const [key, requestor] of requestors.entries()) {
+      if (requestor.providerCount < config.get<number>('maxProvidersPerRequestor')) {
+        selectedRequestorKey = key;
+        requestor.providerCount += 1;
+        break;
+      }
+    }
+
+    if (!selectedRequestorKey) {
+      logger.debug(`No requestor with available capacity found. Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
+      continue;
+    }
+
     // Kick off the plan, staggered by 0-55 seconds to avoid the thundering herd
     logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id})}`);
     const randomDelay = Math.floor(Math.random() * 55000);
     const planPromise = new Promise<void>((resolve, reject) => {
       setTimeout(() => {
-        executePlan(job, gpuClassMap)
+        executePlan(requestors.get(selectedRequestorKey).client, job, gpuClassMap)
           .catch(async (err: any) => {
             logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
             console.error(err);
