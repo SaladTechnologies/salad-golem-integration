@@ -6,11 +6,11 @@ import { plansDb } from './db.js';
 import { getGpuClasses } from './matrix.js';
 import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
+import { provisionRequestor } from './requestor.js';
 import { createGolemClient } from './glm.js';
 import { k8sApi, k8sProviderNamespace, k8sRequestorNamespace } from './k8s.js';
 import { getAdjustedNow } from './time.js';
 import { GolemAbortError, GolemNetwork, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
-import { pinoPrettyLogger } from '@golem-sdk/pino-logger';
 
 // Provisioned requestors
 export let requestors: Map<string, any> = new Map();
@@ -47,7 +47,16 @@ export async function provisionRequestors() {
       // Provision new requestor
       logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
 
-      // TODO: Provision the requestor in Kubernetes
+      // Provision the requestor in Kubernetes
+      await provisionRequestor(k8sApi, k8sRequestorNamespace, {
+        name: expectedPodName,
+        environment: {
+          GOLEM_API_URL: config.get<string>('apiUrl'),
+          GOLEM_API_KEY: config.get<string>('apiKey'),
+          GOLEM_WALLET_PRIVATE_KEY: privateKey,
+          GOLEM_PAYMENT_NETWORK: config.get<string>('paymentNetwork'),
+        }
+      });
 
       // Create GolemNetwork requestor instance
       const client = createGolemClient<GolemNetwork>(config.get<string>('apiUrl'), config.get<string>('apiKey'));
