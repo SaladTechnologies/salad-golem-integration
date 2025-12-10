@@ -1,4 +1,4 @@
-import { ApiException, CoreV1Api, V1PersistentVolumeClaim } from '@kubernetes/client-node';
+import { ApiException, CoreV1Api, V1PersistentVolumeClaim, V1Secret } from '@kubernetes/client-node';
 import { k8sApi } from './k8s.js';
 import { logger } from './logger.js';
 
@@ -181,6 +181,25 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
     }
   }
 
+  // Create Secret for environment variables
+  const secret: V1Secret = {
+    metadata: { name: names.environmentName, namespace },
+    type: 'Opaque',
+    stringData: requestor.environment,
+  };
+
+  try {
+    await k8sApi.createNamespacedSecret({namespace, body: secret});
+  } catch(err) {
+    // Ignore if already exists
+    if (err instanceof ApiException && err.code === 409) {
+      logger.info(`Secret ${names.environmentName} already exists. Skipping creation.`);
+    }
+    else {
+      logger.error(err, `Error creating Secret ${names.environmentName}:`);
+    }
+  }
+
   const podManifest = {
     apiVersion: 'v1',
     kind: 'Pod',
@@ -208,7 +227,7 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
           },
           volumeMounts: [
             {
-              name: 'yagna-pvc',
+              name: names.pvcName,
               mountPath: '/mnt/yagna',
             },
           ],
@@ -219,12 +238,8 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
           name: 'yagna',
           image: 'saladtechnologies/golem-requestor:v0.17.6-1',
           args: ['service', 'run'],
-          env: [
-            { name: 'POLYGON_MAX_FEE_PER_GAS', value: '1000' },
-            { name: 'CENTRAL_NET_HOST', value: 'polygongas.org:7999' },
-            { name: 'YA_NET_TYPE', value: 'central' },
-            { name: 'YAGNA_API_URL', value: 'http://0.0.0.0:7465' },
-            { name: 'YAGNA_AUTOCONF_APPKEY', value: names.podName },
+          envFrom: [
+            { secretRef: { name: names.environmentName } },
           ],
           ports: [
             { containerPort: 7465, name: 'http', protocol: 'TCP' },
@@ -235,7 +250,7 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
           },
           volumeMounts: [
             {
-              name: 'yagna-pvc',
+              name: names.pvcName,
               mountPath: '/home/ubuntu/.local/share/yagna/',
             },
           ],
@@ -317,29 +332,18 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
 }
 
 async function main() {
-  // Create PVC
-  try {
-    await k8sApi.createNamespacedPersistentVolumeClaim({ namespace: k8sRequestorNamespace, body: pvcManifest });
-    logger.info('PersistentVolumeClaim created');
-  } catch (err) {
-    logger.error(err, 'Error creating PersistentVolumeClaim:');
-  }
+  const requestor: Requestor = {
+    name: 'requestor-ben',
+    environment: {
+      'YAGNA_API_URL': 'http://0.0.0.0:7465',
+      'YAGNA_AUTOCONF_APPKEY': 'requestor-ben',
+      'YA_NET_TYPE': 'central',
+      'CENTRAL_NET_HOST': 'polygongas.org:7999',
+      'POLYGON_MAX_FEE_PER_GAS': '1000',
+    },
+  };
 
-  // Create Pod
-  try {
-    await k8sApi.createNamespacedPod({ namespace: k8sRequestorNamespace, body: podManifest });
-    logger.info('Pod created');
-  } catch (err) {
-    logger.error(err, 'Error creating pod:');
-  }
-
-  // Create Service
-  try {
-    await k8sApi.createNamespacedService({ namespace: k8sRequestorNamespace, body: serviceManifest });
-    logger.info('Service created');
-  } catch (err) {
-    logger.error(err, 'Error creating service:');
-  }
+  await provisionRequestor(k8sApi, k8sRequestorNamespace, requestor);
 }
 
 main();
