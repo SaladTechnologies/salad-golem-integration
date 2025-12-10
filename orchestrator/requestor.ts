@@ -201,6 +201,45 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
   }
 }
 
+/**
+ * Deprovisions a Requestor by deleting its Pod, Service, Secret, and PVC.
+ */
+export async function deprovisionRequestor(k8sApi: CoreV1Api, namespace: string, name: string) {
+  const names = generateNames(name);
+
+  // Delete Pod
+  try {
+    await k8sApi.deleteNamespacedPod({ name: names.podName, namespace });
+    logger.info(`Pod ${names.podName} deleted`);
+  } catch (err) {
+    logger.error(err, `Error deleting pod ${names.podName}:`);
+  }
+
+  // Delete Service
+  try {
+    await k8sApi.deleteNamespacedService({ name: names.serviceName, namespace });
+    logger.info(`Service ${names.serviceName} deleted`);
+  } catch (err) {
+    logger.error(err, `Error deleting service ${names.serviceName}:`);
+  }
+
+  // Delete Secret
+  try {
+    await k8sApi.deleteNamespacedSecret({ name: names.environmentName, namespace });
+    logger.info(`Secret ${names.environmentName} deleted`);
+  } catch (err) {
+    logger.error(err, `Error deleting secret ${names.environmentName}:`);
+  }
+
+  // Delete PVC
+  try {
+    await k8sApi.deleteNamespacedPersistentVolumeClaim({ name: names.pvcName, namespace });
+    logger.info(`PersistentVolumeClaim ${names.pvcName} deleted`);
+  } catch (err) {
+    logger.error(err, `Error deleting PersistentVolumeClaim ${names.pvcName}:`);
+  }
+}
+
 async function main() {
   const requestor: Requestor = {
     name: 'requestor-ben',
