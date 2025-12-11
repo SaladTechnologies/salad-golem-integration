@@ -21,7 +21,7 @@ export async function reapUnusedResources() {
     // Extract UUID from pod name assuming format node-<UUID>
     const uuidMatch = podName?.match(/^node-(.+)$/);
     const nodeId = uuidMatch ? uuidMatch[1] : podName;
-    if (nodeId && !activePlans.has(nodeId)) {
+    if (uuidMatch && nodeId && !activePlans.has(nodeId)) {
       try {
         logger.info(`Reaping node: ${podName}`);
         await deprovisionNode(k8sApi, k8sProviderNamespace, { name: podName!, environment: {}, presets: {}, offerTemplate: {} });
@@ -46,7 +46,7 @@ export async function reapUnusedResources() {
     // Extract the UUID from node-<UUID>-presets or node-<UUID>-template
     const uuidMatch = cmName?.match(/^node-([^-]+)-(presets|template)$/);
     const nodeId = uuidMatch ? uuidMatch[1] : cmName;
-    if (nodeId && !activePlans.has(nodeId)) {
+    if (uuidMatch && nodeId && !activePlans.has(nodeId)) {
       try {
         logger.info(`Reaping ConfigMap: ${cmName}`);
         await k8sApi.deleteNamespacedConfigMap({ name: cmName!, namespace: k8sProviderNamespace });
@@ -71,7 +71,7 @@ export async function reapUnusedResources() {
     // Extract the UUID from node-<UUID>-env
     const uuidMatch = secretName?.match(/^node-([^-]+)-env$/);
     const uuid = uuidMatch ? uuidMatch[1] : secretName;
-    if (uuid && !activePlans.has(uuid)) {
+    if (uuidMatch && uuid && !activePlans.has(uuid)) {
       try {
         logger.info(`Reaping Secret: ${secretName}`);
         await k8sApi.deleteNamespacedSecret({ name: secretName!, namespace: k8sProviderNamespace });
