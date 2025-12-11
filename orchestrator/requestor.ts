@@ -239,20 +239,3 @@ export async function deprovisionRequestor(k8sApi: CoreV1Api, namespace: string,
     logger.error(err, `Error deleting PersistentVolumeClaim ${names.pvcName}:`);
   }
 }
-
-async function main() {
-  const requestor: Requestor = {
-    name: 'requestor-ben',
-    environment: {
-      'YAGNA_API_URL': 'http://0.0.0.0:7465',
-      'YAGNA_AUTOCONF_APPKEY': 'requestor-ben',
-      'YA_NET_TYPE': 'central',
-      'CENTRAL_NET_HOST': 'polygongas.org:7999',
-      'POLYGON_MAX_FEE_PER_GAS': '1000',
-    },
-  };
-
-  await provisionRequestor(k8sApi, k8sRequestorNamespace, requestor);
-}
-
-main();

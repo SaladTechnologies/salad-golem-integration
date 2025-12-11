@@ -38,28 +38,36 @@ export async function provisionRequestors() {
     // Check if requestor pod already exists
     const requestorKey = publicKey.toLowerCase().replace('0x', '');
     const expectedPodName = `requestor-${requestorKey}`;
+    let podExits = false;
     if (requestorPodNames.includes(expectedPodName)) {
       logger.info(`Requestor pod for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
-      continue;
+      podExits = true;
     }
 
     if (!requestors.has(requestorKey)) {
-      // Provision new requestor
-      logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
+      if (!podExits) {
+        // Provision new requestor
+        logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
 
-      // Provision the requestor in Kubernetes
-      await provisionRequestor(k8sApi, k8sRequestorNamespace, {
-        name: expectedPodName,
-        environment: {
-          GOLEM_API_URL: config.get<string>('apiUrl'),
-          GOLEM_API_KEY: config.get<string>('apiKey'),
-          GOLEM_WALLET_PRIVATE_KEY: privateKey,
-          GOLEM_PAYMENT_NETWORK: config.get<string>('paymentNetwork'),
-        }
-      });
+        // Provision the requestor in Kubernetes
+        await provisionRequestor(k8sApi, k8sRequestorNamespace, {
+          name: expectedPodName,
+          environment: {
+            YAGNA_API_URL: 'http://0.0.0.0:7465',
+            YAGNA_AUTOCONF_APPKEY: requestorKey,
+            YAGNA_AUTOCONF_ID_SECRET: privateKey.replace('0x', ''),
+            YA_NET_TYPE: 'central',
+            CENTRAL_NET_HOST: 'polygongas.org:7999',
+            POLYGON_MAX_FEE_PER_GAS: '1000'
+          }
+        });
+      }
+
+      const apiUrl = `http://${expectedPodName}-service.${k8sRequestorNamespace}.svc.cluster.local:7465`;
+      logger.info(`Connecting to requestor API at ${apiUrl} for wallet key: ${requestorKey}`);
 
       // Create GolemNetwork requestor instance
-      const client = createGolemClient<GolemNetwork>(config.get<string>('apiUrl'), config.get<string>('apiKey'));
+      const client = createGolemClient<GolemNetwork>(apiUrl, requestorKey);
 
       // Connect to Golem Network
       await client.connect();
