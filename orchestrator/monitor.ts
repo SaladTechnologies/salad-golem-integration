@@ -147,7 +147,7 @@ export async function processPlans(): Promise<void> {
     }
 
     // Enforce max concurrent jobs
-    if (maxConcurrentJobs > 0 && activePlans.size >= maxConcurrentJobs) {
+    if (maxConcurrentJobs >= 0 && activePlans.size >= maxConcurrentJobs) {
       logger.debug(`Maximum concurrent jobs reached (${maxConcurrentJobs}). Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
       continue;
     }
@@ -193,6 +193,7 @@ export async function processPlans(): Promise<void> {
           })
           .finally(() => {
             activePlans.delete(job.node_id);
+            requestors.get(selectedRequestorKey).providerCount -= 1;
           })
           .then(resolve, reject);
       }, randomDelay);

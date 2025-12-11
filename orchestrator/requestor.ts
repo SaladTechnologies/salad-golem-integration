@@ -128,7 +128,7 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
               path: '/version/get',
               port: 7465,
               httpHeaders: [
-                { name: 'Authorization', value: 'Bearer requestor-example' },
+                { name: 'Authorization', value: `Bearer ${requestor.environment.YAGNA_AUTOCONF_APPKEY}` },
               ],
             },
             initialDelaySeconds: 10,
