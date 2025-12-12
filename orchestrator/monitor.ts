@@ -8,9 +8,10 @@ import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
 import { provisionRequestor } from './requestor.js';
 import { createGolemClient } from './glm.js';
-import { k8sApi, k8sProviderNamespace, k8sRequestorNamespace } from './k8s.js';
+import { k8sApi, k8sAppsApi, k8sProviderNamespace, k8sRequestorNamespace } from './k8s.js';
 import { getAdjustedNow } from './time.js';
 import { GolemAbortError, GolemNetwork, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
+import { provisionRelay } from './relay.js';
 
 // Provisioned requestors
 export let requestors: Map<string, any> = new Map();
@@ -30,40 +31,68 @@ export async function provisionRequestors() {
   const requestorPods = await k8sApi.listNamespacedPod({ namespace: k8sRequestorNamespace });
   const requestorPodNames = requestorPods.items.map(pod => pod.metadata?.name).filter(name => name != null) as string[];
 
+  // Get relay stateful sets in the requestor namespace
+  const relayStatefulSets = await k8sAppsApi.listNamespacedStatefulSet({ namespace: k8sRequestorNamespace });
+  const relayNames = relayStatefulSets.items.map(ss => ss.metadata?.name).filter(name => name != null) as string[];
+
   for (const privateKey of walletKeys) {
     // Get the public key from the wallet key
     const wallet = new ethers.Wallet(privateKey);
     const publicKey = await wallet.getAddress();
 
-    // Check if requestor pod already exists
     const requestorKey = publicKey.toLowerCase().replace('0x', '');
-    const expectedPodName = `requestor-${requestorKey}`;
-    let podExits = false;
-    if (requestorPodNames.includes(expectedPodName)) {
+
+    // Check if the relay stateful set already exists
+    const expectedRelayName = `relay-${requestorKey}`;
+    let relayExists = false;
+
+    if (relayNames.includes(expectedRelayName)) {
+      logger.info(`Relay stateful set for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
+      relayExists = true;
+    }
+
+    if (!relayExists) {
+      // Provision new relay
+      logger.info(`Provisioning relay for wallet key: ${requestorKey}`);
+      // Provision the relay in Kubernetes
+      await provisionRelay(expectedRelayName);
+
+      // Wait a moment for the relay to start
+      await new Promise(resolve => setTimeout(resolve, 2 * 1000));
+    }
+
+    const relayUrl = `${expectedRelayName}-service.${k8sRequestorNamespace}.svc.cluster.local:7477`;
+    logger.info(`Relay URL for wallet key ${requestorKey}: ${relayUrl}`);
+
+    // Check if requestor pod already exists
+    const expectedRequestorPodName = `requestor-${requestorKey}`;
+    let requestorExists = false;
+
+    if (requestorPodNames.includes(expectedRequestorPodName)) {
       logger.info(`Requestor pod for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
-      podExits = true;
+      requestorExists = true;
     }
 
     if (!requestors.has(requestorKey)) {
-      if (!podExits) {
+      if (!requestorExists) {
         // Provision new requestor
         logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
 
         // Provision the requestor in Kubernetes
         await provisionRequestor(k8sApi, k8sRequestorNamespace, {
-          name: expectedPodName,
+          name: expectedRequestorPodName,
           environment: {
             YAGNA_API_URL: 'http://0.0.0.0:7465',
             YAGNA_AUTOCONF_APPKEY: requestorKey,
             YAGNA_AUTOCONF_ID_SECRET: privateKey.replace('0x', ''),
-            YA_NET_TYPE: 'central',
-            CENTRAL_NET_HOST: 'polygongas.org:7999',
+            YA_NET_TYPE: 'hybrid',
+            YA_NET_RELAY_HOST: relayUrl,
             POLYGON_MAX_FEE_PER_GAS: '1000'
           }
         });
       }
 
-      const apiUrl = `http://${expectedPodName}-service.${k8sRequestorNamespace}.svc.cluster.local:7465`;
+      const apiUrl = `http://${expectedRequestorPodName}-service.${k8sRequestorNamespace}.svc.cluster.local:7465`;
       logger.info(`Connecting to requestor API at ${apiUrl} for wallet key: ${requestorKey}`);
 
       // Create GolemNetwork requestor instance
@@ -74,6 +103,7 @@ export async function provisionRequestors() {
 
       const requestor = {
         client: client,
+        relay: '',
         providerCount: 0
       };
 
@@ -169,10 +199,10 @@ export async function processPlans(): Promise<void> {
 
     // Kick off the plan, staggered by 0-55 seconds to avoid the thundering herd
     logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id})}`);
-    const randomDelay = Math.floor(Math.random() * 55000);
+    const randomDelay = 0;// Math.floor(Math.random() * 55000);
     const planPromise = new Promise<void>((resolve, reject) => {
       setTimeout(() => {
-        executePlan(requestors.get(selectedRequestorKey).client, job, gpuClassMap)
+        executePlan(requestors.get(selectedRequestorKey), job, gpuClassMap)
           .catch(async (err: any) => {
             logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
             console.error(err);
