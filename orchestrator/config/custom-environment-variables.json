@@ -4,6 +4,7 @@
   "kubeConfigPath": "KUBE_CONFIG_PATH",
   "matrixApiKey": "MATRIX_API_KEY",
   "matrixApiUrl": "MATRIX_API_URL",
+  "maxProvidersPerRequestor": "MAX_PROVIDERS_PER_REQUESTOR",
   "nodesDatabaseFilePath": "NODES_DATABASE_FILE_PATH",
   "organizationWhitelist": {
     "__name": "ORGANIZATION_WHITELIST",

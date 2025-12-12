@@ -183,6 +183,7 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
         },
       ],
       type: 'ClusterIP',
+      clusterIP: 'None',
     },
   };
 
