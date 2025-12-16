@@ -1,13 +1,21 @@
 import config from 'config';
 import timespan from 'timespan-parser';
+import retry from 'async-retry';
+import { ethers } from 'ethers';
 import { logger } from './logger.js';
 import { plansDb } from './db.js';
 import { getGpuClasses } from './matrix.js';
 import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
-import { k8sApi, k8sProviderNamespace } from './k8s.js';
+import { provisionRequestor } from './requestor.js';
+import { createGolemClient } from './glm.js';
+import { k8sApi, k8sAppsApi, k8sProviderNamespace, k8sRequestorNamespace } from './k8s.js';
 import { getAdjustedNow } from './time.js';
-import { GolemAbortError, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
+import { GolemAbortError, GolemNetwork, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
+import { provisionRelay } from './relay.js';
+
+// Provisioned requestors
+export let requestors: Map<string, any> = new Map();
 
 // Track active plans to prevent overlapping executions
 export let activePlans = new Map<string, Promise<void>>();
@@ -17,6 +25,114 @@ let failedPlans = new Set<number>();
 
 // Cache GPU classes to minimize API calls
 let gpuClasses: any[] = [];
+
+export async function provisionRequestors() {
+  const walletKeys: string[] = config.get('requestorWalletKeys');
+
+  const requestorPods = await k8sApi.listNamespacedPod({ namespace: k8sRequestorNamespace });
+  const requestorPodNames = requestorPods.items.map(pod => pod.metadata?.name).filter(name => name != null) as string[];
+
+  // Get relay stateful sets in the requestor namespace
+  const relayStatefulSets = await k8sAppsApi.listNamespacedStatefulSet({ namespace: k8sRequestorNamespace });
+  const relayNames = relayStatefulSets.items.map(ss => ss.metadata?.name).filter(name => name != null) as string[];
+
+  let promises = [];  for (const privateKey of walletKeys) {
+    promises.push(setupRequestorAndRelay(privateKey, requestorPodNames, relayNames));
+  }
+
+  await Promise.all(promises);
+}
+
+async function setupRequestorAndRelay(privateKey: string, requestorPodNames: string[], relayNames: string[]) {
+  try {
+    // Get the public key from the wallet key
+    const wallet = new ethers.Wallet(privateKey);
+    const publicKey = await wallet.getAddress();
+
+    const requestorKey = publicKey.toLowerCase().replace('0x', '');
+
+    // Check if the relay stateful set already exists
+    const expectedRelayName = `relay-${requestorKey}`;
+    let relayExists = false;
+
+    if (relayNames.includes(expectedRelayName)) {
+      logger.info(`Relay stateful set for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
+      relayExists = true;
+    }
+
+    if (!relayExists) {
+      // Provision new relay
+      logger.info(`Provisioning relay for wallet key: ${requestorKey}`);
+      // Provision the relay in Kubernetes
+      await provisionRelay(expectedRelayName);
+
+      // Wait a moment for the relay to start
+      await new Promise(resolve => setTimeout(resolve, 2 * 1000));
+    }
+
+    const relayUrl = `${expectedRelayName}-service.${k8sRequestorNamespace}.svc.cluster.local:7477`;
+    logger.info(`Relay URL for wallet key ${requestorKey}: ${relayUrl}`);
+
+    // Check if requestor pod already exists
+    const expectedRequestorPodName = `requestor-${requestorKey}`;
+    let requestorExists = false;
+
+    if (requestorPodNames.includes(expectedRequestorPodName)) {
+      logger.info(`Requestor pod for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
+      requestorExists = true;
+    }
+
+    if (!requestors.has(requestorKey)) {
+      if (!requestorExists) {
+        // Provision new requestor
+        logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
+
+        // Provision the requestor in Kubernetes
+        await provisionRequestor(k8sApi, k8sRequestorNamespace, {
+          name: expectedRequestorPodName,
+          environment: {
+            YAGNA_API_URL: 'http://0.0.0.0:7465',
+            YAGNA_AUTOCONF_APPKEY: requestorKey,
+            YAGNA_AUTOCONF_ID_SECRET: privateKey.replace('0x', ''),
+            YA_NET_TYPE: 'hybrid',
+            YA_NET_RELAY_HOST: relayUrl,
+            POLYGON_MAX_FEE_PER_GAS: config.get<number>('polygonMaxGasFeeGwei').toString(),
+          }
+        });
+      }
+
+      const apiUrl = `http://${expectedRequestorPodName}-service.${k8sRequestorNamespace}.svc.cluster.local:7465`;
+      logger.info(`Connecting to requestor API at ${apiUrl} for wallet key: ${requestorKey}`);
+
+      // Create GolemNetwork requestor instance
+      const client = createGolemClient<GolemNetwork>(apiUrl, requestorKey);
+
+      // Connect to Golem Network
+      // Use async retry to handle potential startup delays
+      await retry(async () => {
+        await client.connect();
+      }, {
+        onRetry: (err, attempt) => {
+          logger.warn(err, `Retrying connection to requestor API at ${apiUrl} for wallet key: ${requestorKey}. Attempt ${attempt}. Error:`);
+        },
+        retries: 5,
+        minTimeout: 10000,
+        maxTimeout: 20000,
+      });
+
+      const requestor = {
+        client: client,
+        relay: relayUrl,
+        providerCount: 0
+      };
+
+      requestors.set(requestorKey, requestor);
+      logger.info(`Provisioned requestor for wallet key: ${requestorKey}`);
+    }
+  } catch (err) {
+    logger.error(err, `Error provisioning requestor for wallet key: ${privateKey}:`);
+  }
+}
 
 /**
  * Process plans that are due to start.
@@ -55,6 +171,16 @@ export async function processPlans(): Promise<void> {
     return;
   }
 
+  if (requestors.size === 0) {
+    logger.warn('No requestors available yet to process plans. Skipping plan processing.');
+    return;
+  }
+
+  // Report requestor statuses
+  for (const [key, requestor] of requestors.entries()) {
+    logger.info(`Requestor ${key} - Providers: ${requestor.providerCount}`);
+  }
+
   // Fetch GPU classes from Matrix
   if (gpuClasses.length === 0) {
     try {
@@ -82,17 +208,32 @@ export async function processPlans(): Promise<void> {
     }
 
     // Enforce max concurrent jobs
-    if (maxConcurrentJobs > 0 && activePlans.size >= maxConcurrentJobs) {
+    if (maxConcurrentJobs >= 0 && activePlans.size >= maxConcurrentJobs) {
       logger.debug(`Maximum concurrent jobs reached (${maxConcurrentJobs}). Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
+      continue;
+    }
+
+    // Find a requestor with capacity
+    let selectedRequestorKey: string | null = null;
+    for (const [key, requestor] of requestors.entries()) {
+      if (requestor.providerCount < config.get<number>('maxProvidersPerRequestor')) {
+        selectedRequestorKey = key;
+        requestor.providerCount += 1;
+        break;
+      }
+    }
+
+    if (!selectedRequestorKey) {
+      logger.debug(`No requestor with available capacity found. Skipping plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}).`);
       continue;
     }
 
     // Kick off the plan, staggered by 0-55 seconds to avoid the thundering herd
     logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id})}`);
-    const randomDelay = Math.floor(Math.random() * 55000);
+    const randomDelay = 0;// Math.floor(Math.random() * 55000);
     const planPromise = new Promise<void>((resolve, reject) => {
       setTimeout(() => {
-        executePlan(job, gpuClassMap)
+        executePlan(requestors.get(selectedRequestorKey), job, gpuClassMap)
           .catch(async (err: any) => {
             logger.error(`Error executing plan for node_id=${job.node_id} (plan_id=${job.node_plan_id}):`, err);
             console.error(err);
@@ -113,6 +254,7 @@ export async function processPlans(): Promise<void> {
           })
           .finally(() => {
             activePlans.delete(job.node_id);
+            requestors.get(selectedRequestorKey).providerCount -= 1;
           })
           .then(resolve, reject);
       }, randomDelay);

@@ -1,6 +1,6 @@
-import { activePlans, processPlans } from './monitor.js';
+import { activePlans, processPlans, provisionRequestors, requestors } from './monitor.js';
 import { nodesDb, plansDb, pricesDb } from './db.js';
-import { glm, shutdown } from './glm.js';
+import { shutdown } from './glm.js';
 import { logger } from './logger.js';
 import { k8sApi, k8sProviderNamespace } from './k8s.js';
 import { deprovisionNode } from './provider.js';
@@ -11,11 +11,8 @@ import { scheduleTask } from './helpers.js';
 process.on('SIGINT', () => shutdownHandler('SIGINT'));
 process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
 
-// Connect to Golem Network
-await glm.connect();
-
-// Initial plan processing on startup
-await processPlans();
+// Provision requestors in the background
+provisionRequestors();
 
 // Schedule plan processing every minute
 let runnerInterval = setInterval(processPlans, 1000 * 60);
@@ -37,9 +34,15 @@ async function shutdownHandler(signal: string) {
   shutdown.abort();
 
   // Disconnect from Golem Network
-  await glm.disconnect();
+  for (const [requestorKey, requestor] of requestors) {
+    try {
+      await requestor.client.disconnect();
+    } catch (err) {
+      logger.error(err, `Error disconnecting requestor ${requestorKey}:`);
+    }
+  }
 
-  console.log('Disconnected from Golem Network.');
+  logger.info('Disconnected from Golem Network.');
 
   // Deprovision all active provider nodes
   for (const [planKey] of activePlans) {

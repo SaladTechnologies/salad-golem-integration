@@ -2,8 +2,10 @@
   "apiUrl": "http://127.0.0.1:7465",
   "apiKey": "eb9d0e5f5f144a7a8267c715af5d3300",
   "k8sProviderNamespace": "golem-providers",
+  "k8sRequestorNamespace": "golem-requestors",
   "kubeConfigPath": "",
   "maxConcurrentJobs": -1,
+  "maxProvidersPerRequestor": 50,
   "matrixApiKey": "",
   "matrixApiUrl": "",
   "minimumDuration": "10min",
@@ -11,7 +13,9 @@
   "organizationWhitelist": [],
   "paymentNetwork": "polygon",
   "plansDatabaseFilePath": "../data/plans.db",
+  "polygonMaxGasFeeGwei": 1000,
   "pricesDatabaseFilePath": "../data/prices.db",
+  "requestorWalletKeys": [],
   "timeLag": "48hr",
   "yagnaAccount": "0x57123711a7dc9731458fc6b06df23a7a5d871fba"
 }
