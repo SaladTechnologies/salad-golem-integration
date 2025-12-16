@@ -20,6 +20,8 @@ hull:
         data:
           MATRIX_API_KEY:
             path: secrets/matrixApiKey.txt
+          REQUESTOR_WALLET_KEYS:
+            path: secrets/requestorWalletKeys.txt
       plan-importer-env:
         data:
           MIXPANEL_API_KEY:

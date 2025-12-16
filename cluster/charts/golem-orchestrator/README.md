@@ -17,6 +17,7 @@ To configure the deployment, create the following secret files in the `secrets` 
 - `coinmarketcapApiKey.txt` - The API key for the CoinMarketCap API.
 - `matrixApiKey.txt` - The API key for the Matrix API.
 - `mixpanelApiKey.txt` - The API key for the Mixpanel API.
+- `requestorWalletKeys.txt` - The private keys for requestor wallets.
 
 ## Deploying
 
