@@ -113,6 +113,10 @@ hull:
             apiGroups: [""]
             resources: ["secrets"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+          statefulsets:
+            apiGroups: [""]
+            resources: ["statefulsets"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
     rolebinding:
       providers-rolebinding:
         namespaceOverride: _HT*hull.config.specific.providers_namespace
