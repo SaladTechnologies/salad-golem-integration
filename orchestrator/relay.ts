@@ -83,9 +83,9 @@ export async function provisionRelay(name: string) {
   // Create StatefulSet
   try {
     await k8sAppsApi.createNamespacedStatefulSet({ namespace: k8sRequestorNamespace, body: statefulSetManifest });
-    logger.info('StatefulSet created');
+    logger.info(`StatefulSet ${names.statefulSetName} created`);
   } catch (err) {
-    logger.error(err, 'Error creating StatefulSet:');
+    logger.error(err, `Error creating StatefulSet ${names.statefulSetName}:`);
   }
 
   const serviceManifest: V1Service = {
@@ -120,9 +120,9 @@ export async function provisionRelay(name: string) {
   // Create Service
   try {
     await k8sApi.createNamespacedService({ namespace: k8sRequestorNamespace, body: serviceManifest });
-    logger.info('Service created');
+    logger.info(`Service ${names.serviceName} created`);
   } catch (err) {
-    logger.error(err, 'Error creating service:');
+    logger.error(err, `Error creating service ${names.serviceName}:`);
   }
 }
 
