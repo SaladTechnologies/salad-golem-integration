@@ -113,6 +113,10 @@ hull:
             apiGroups: [""]
             resources: ["secrets"]
             verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+          services:
+            apiGroups: [""]
+            resources: ["services"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
           statefulsets:
             apiGroups: ["apps"]
             resources: ["statefulsets"]
