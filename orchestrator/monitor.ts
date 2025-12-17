@@ -29,21 +29,18 @@ let gpuClasses: any[] = [];
 export async function provisionRequestors() {
   const walletKeys: string[] = config.get('requestorWalletKeys');
 
-  const requestorPods = await k8sApi.listNamespacedPod({ namespace: k8sRequestorNamespace });
-  const requestorPodNames = requestorPods.items.map(pod => pod.metadata?.name).filter(name => name != null) as string[];
-
-  // Get relay stateful sets in the requestor namespace
-  const relayStatefulSets = await k8sAppsApi.listNamespacedStatefulSet({ namespace: k8sRequestorNamespace });
-  const relayNames = relayStatefulSets.items.map(ss => ss.metadata?.name).filter(name => name != null) as string[];
+  // Get stateful sets in the requestor namespace
+  const statefulSets = await k8sAppsApi.listNamespacedStatefulSet({ namespace: k8sRequestorNamespace });
+  const statefulSetNames = statefulSets.items.map(ss => ss.metadata?.name).filter(name => name != null) as string[];
 
   let promises = [];  for (const privateKey of walletKeys) {
-    promises.push(setupRequestorAndRelay(privateKey, requestorPodNames, relayNames));
+    promises.push(setupRequestorAndRelay(privateKey, statefulSetNames));
   }
 
   await Promise.all(promises);
 }
 
-async function setupRequestorAndRelay(privateKey: string, requestorPodNames: string[], relayNames: string[]) {
+async function setupRequestorAndRelay(privateKey: string, statefulSetNames: string[]) {
   try {
     // Get the public key from the wallet key
     const wallet = new ethers.Wallet(privateKey);
@@ -55,7 +52,7 @@ async function setupRequestorAndRelay(privateKey: string, requestorPodNames: str
     const expectedRelayName = `relay-${requestorKey}`;
     let relayExists = false;
 
-    if (relayNames.includes(expectedRelayName)) {
+    if (statefulSetNames.includes(expectedRelayName)) {
       logger.info(`Relay stateful set for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
       relayExists = true;
     }
@@ -74,11 +71,11 @@ async function setupRequestorAndRelay(privateKey: string, requestorPodNames: str
     logger.info(`Relay URL for wallet key ${requestorKey}: ${relayUrl}`);
 
     // Check if requestor pod already exists
-    const expectedRequestorPodName = `requestor-${requestorKey}`;
+    const expectedRequestorName = `requestor-${requestorKey}`;
     let requestorExists = false;
 
-    if (requestorPodNames.includes(expectedRequestorPodName)) {
-      logger.info(`Requestor pod for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
+    if (statefulSetNames.includes(expectedRequestorName)) {
+      logger.info(`Requestor stateful set for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
       requestorExists = true;
     }
 
@@ -89,7 +86,7 @@ async function setupRequestorAndRelay(privateKey: string, requestorPodNames: str
 
         // Provision the requestor in Kubernetes
         await provisionRequestor(k8sApi, k8sRequestorNamespace, {
-          name: expectedRequestorPodName,
+          name: expectedRequestorName,
           environment: {
             YAGNA_API_URL: 'http://0.0.0.0:7465',
             YAGNA_AUTOCONF_APPKEY: requestorKey,
@@ -101,7 +98,7 @@ async function setupRequestorAndRelay(privateKey: string, requestorPodNames: str
         });
       }
 
-      const apiUrl = `http://${expectedRequestorPodName}-service.${k8sRequestorNamespace}.svc.cluster.local:7465`;
+      const apiUrl = `http://${expectedRequestorName}-service.${k8sRequestorNamespace}.svc.cluster.local:7465`;
       logger.info(`Connecting to requestor API at ${apiUrl} for wallet key: ${requestorKey}`);
 
       // Create GolemNetwork requestor instance
