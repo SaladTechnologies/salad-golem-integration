@@ -234,7 +234,6 @@ hull:
         serviceName: _HT^orchestrator
         updateStrategy:
           rollingUpdate:
-            maxUnavailable: 1
             partition: 0
           type: RollingUpdate
         volumeClaimTemplates:
