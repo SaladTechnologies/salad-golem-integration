@@ -1,5 +1,11 @@
 hull:
   config:
+    general:
+      metadata:
+        labels:
+          common:
+            app.kubernetes.io/part-of: golem-orchestrator
+            app.kubernetes.io/version: _HT*hull.config.specific.tag
     specific:
       matrix_api_url: https://matrix-rest-api.salad.com
       organizations_array: '["realfake"]'
