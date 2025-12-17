@@ -21,7 +21,3 @@ spec:
     path: cluster/charts/doks-debug
     repoURL: https://github.com/SaladTechnologies/salad-golem-integration.git
     targetRevision: HEAD
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true

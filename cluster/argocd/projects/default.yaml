@@ -3,18 +3,19 @@ kind: AppProject
 metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
-  name: gitops-namespaces
+  name: default
   namespace: argocd
 spec:
   clusterResourceWhitelist:
-    - group: ""
-      kind: "Namespace"
-  description: "GitOps project containing the cluster namespaces"
+    - group: "*"
+      kind: "*"
+  description: "Default GitOps project"
   destinations:
     - name: in-cluster
       namespace: "*"
-  namespaceResourceBlacklist:
+  namespaceResourceWhitelist:
     - group: "*"
       kind: "*"
   sourceRepos:
     - https://github.com/SaladTechnologies/salad-golem-integration.git
+    - https://prometheus-community.github.io/helm-charts

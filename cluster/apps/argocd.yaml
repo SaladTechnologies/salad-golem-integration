@@ -21,7 +21,3 @@ spec:
     path: cluster/charts/argocd
     repoURL: https://github.com/SaladTechnologies/salad-golem-integration.git
     targetRevision: HEAD
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
