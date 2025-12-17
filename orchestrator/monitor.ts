@@ -115,7 +115,7 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
         },
         retries: 5,
         minTimeout: 10000,
-        maxTimeout: 20000,
+        maxTimeout: 30000,
       });
 
       const requestor = {
