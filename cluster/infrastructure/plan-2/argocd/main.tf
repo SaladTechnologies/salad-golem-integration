@@ -124,7 +124,7 @@ resource "kubernetes_manifest" "root_proj" {
       labels = {
         "app.kubernetes.io/managed-by" = "terraform"
       }
-      name      = "gitops-root"
+      name      = "root"
       namespace = kubernetes_namespace_v1.argocd_ns.metadata[0].name
     }
     spec = {
@@ -134,7 +134,7 @@ resource "kubernetes_manifest" "root_proj" {
           kind  = "*"
         }
       ]
-      description = "GitOps project containing the root application"
+      description = "The GitOps project containing the root application."
       destinations = [
         {
           name      = "in-cluster"
@@ -193,12 +193,12 @@ resource "kubernetes_manifest" "root_app" {
       project = kubernetes_manifest.root_proj.manifest.metadata.name
       sources = [
         {
-          path           = "cluster/apps"
+          path           = "cluster/argocd/apps"
           repoURL        = "https://github.com/SaladTechnologies/salad-golem-integration.git"
           targetRevision = "HEAD"
         },
         {
-          path           = "cluster/projects"
+          path           = "cluster/argocd/projects"
           repoURL        = "https://github.com/SaladTechnologies/salad-golem-integration.git"
           targetRevision = "HEAD"
         }

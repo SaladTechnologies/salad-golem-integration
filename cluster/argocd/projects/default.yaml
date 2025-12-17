@@ -9,7 +9,7 @@ spec:
   clusterResourceWhitelist:
     - group: "*"
       kind: "*"
-  description: "Default GitOps project"
+  description: "The default GitOps project."
   destinations:
     - name: in-cluster
       namespace: "*"

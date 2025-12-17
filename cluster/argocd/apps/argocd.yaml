@@ -2,22 +2,22 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   annotations:
-    argocd.argoproj.io/sync-wave: "-1000000"
+    argocd.argoproj.io/sync-wave: "-100000"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
-    app.kubernetes.io/name: namespaces
-  name: namespaces
+    app.kubernetes.io/name: argocd
+  name: argocd
   namespace: argocd
 spec:
   destination:
     name: in-cluster
-    namespace: default
+    namespace: argocd
   info:
     - name: SaladTechnologies/salad-golem-integration
       value: https://github.com/SaladTechnologies/salad-golem-integration/
   project: default
   source:
-    path: cluster/namespaces
+    path: cluster/apps/argocd
     repoURL: https://github.com/SaladTechnologies/salad-golem-integration.git
     targetRevision: HEAD
