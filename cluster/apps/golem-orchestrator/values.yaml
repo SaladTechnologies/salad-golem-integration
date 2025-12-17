@@ -3,6 +3,8 @@ hull:
     specific:
       matrix_api_url: https://matrix-rest-api.salad.com
       organizations_array: '["realfake"]'
+      providers_namespace: golem-providers
+      requestors_namespace: golem-requestors
       secrets_timestamp: "1765954477"
       storage_class_name: do-block-storage
       tag: "8c40218"
@@ -74,6 +76,58 @@ hull:
             name: onepassword-secret-store
           target:
             name: _HT^price-importer-env
+    role:
+      providers-role:
+        namespaceOverride: _HT*hull.config.specific.providers_namespace
+        rules:
+          configmaps:
+            apiGroups: [""]
+            resources: ["configmaps"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+          pods:
+            apiGroups: [""]
+            resources: ["pods"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+          secrets:
+            apiGroups: [""]
+            resources: ["secrets"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+      requestors-role:
+        namespaceOverride: _HT*hull.config.specific.requestors_namespace
+        rules:
+          configmaps:
+            apiGroups: [""]
+            resources: ["configmaps"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+          pods:
+            apiGroups: [""]
+            resources: ["pods"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+          secrets:
+            apiGroups: [""]
+            resources: ["secrets"]
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"]
+    rolebinding:
+      providers-rolebinding:
+        namespaceOverride: _HT*hull.config.specific.providers_namespace
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: Role
+          name: _HT^providers-role
+        subjects:
+          - kind: ServiceAccount
+            name: _HT^default
+            namespace: _HT**Release.Namespace
+      requestors-rolebinding:
+        namespaceOverride: _HT*hull.config.specific.requestors_namespace
+        roleRef:
+          apiGroup: rbac.authorization.k8s.io
+          kind: Role
+          name: _HT^requestors-role
+        subjects:
+          - kind: ServiceAccount
+            name: _HT^default
+            namespace: _HT**Release.Namespace
     statefulset:
       orchestrator:
         minReadySeconds: 60
