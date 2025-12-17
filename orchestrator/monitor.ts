@@ -91,6 +91,7 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
             YAGNA_API_URL: 'http://0.0.0.0:7465',
             YAGNA_AUTOCONF_APPKEY: requestorKey,
             YAGNA_AUTOCONF_ID_SECRET: privateKey.replace('0x', ''),
+            YA_PAYMENT_NETWORK_GROUP: "mainnet",
             YA_NET_TYPE: 'hybrid',
             YA_NET_RELAY_HOST: relayUrl,
             POLYGON_MAX_FEE_PER_GAS: config.get<number>('polygonMaxGasFeeGwei').toString(),
