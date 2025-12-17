@@ -1,35 +1,79 @@
 hull:
   config:
-    general:
-      metadata:
-        labels:
-          common:
-            app.kubernetes.io/part-of: golem-network
-            app.kubernetes.io/version: _HT*hull.config.specific.tag
     specific:
       matrix_api_url: https://matrix-rest-api.salad.com
       organizations_array: '["realfake"]'
+      secrets_timestamp: "1765954477"
       storage_class_name: do-block-storage
       tag: "8c40218"
       yagna_account: "0x57123711a7dc9731458fc6b06df23a7a5d871fba"
       yagna_api_key: "15155534c5cc4bfe9cca9717a5e1873d"
       yagna_api_url: http://requestor-15155534c5cc4bfe9cca9717a5e1873d-0.requestor-15155534c5cc4bfe9cca9717a5e1873d.golem-requestors.svc.cluster.local:7465
   objects:
-    secret:
+    customresource:
       orchestrator-env:
-        data:
-          MATRIX_API_KEY:
-            path: secrets/matrixApiKey.txt
-          REQUESTOR_WALLET_KEYS:
-            path: secrets/requestorWalletKeys.txt
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        annotations:
+          external-secrets.io/force-sync: _HT*hull.config.specific.secrets_timestamp
+        spec:
+          dataFrom:
+            - find:
+                path: Golem Orchestrator Environment
+                name:
+                  regexp: '^\$.*'
+              rewrite:
+                - regexp:
+                    source: '^\$(.*)$'
+                    target: "$1"
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: onepassword-secret-store
+          target:
+            name: _HT^orchestrator-env
       plan-importer-env:
-        data:
-          MIXPANEL_API_KEY:
-            path: secrets/mixpanelApiKey.txt
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        annotations:
+          external-secrets.io/force-sync: _HT*hull.config.specific.secrets_timestamp
+        spec:
+          dataFrom:
+            - find:
+                path: Golem Plan Importer Environment
+                name:
+                  regexp: '^\$.*'
+              rewrite:
+                - regexp:
+                    source: '^\$(.*)$'
+                    target: "$1"
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: onepassword-secret-store
+          target:
+            name: _HT^plan-importer-env
       price-importer-env:
-        data:
-          COINMARKETCAP_API_KEY:
-            path: secrets/coinmarketcapApiKey.txt
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        annotations:
+          external-secrets.io/force-sync: _HT*hull.config.specific.secrets_timestamp
+        spec:
+          dataFrom:
+            - find:
+                path: Golem Price Importer Environment
+                name:
+                  regexp: '^\$.*'
+              rewrite:
+                - regexp:
+                    source: '^\$(.*)$'
+                    target: "$1"
+          refreshInterval: 1h
+          secretStoreRef:
+            kind: ClusterSecretStore
+            name: onepassword-secret-store
+          target:
+            name: _HT^price-importer-env
     statefulset:
       orchestrator:
         minReadySeconds: 60
@@ -51,7 +95,7 @@ hull:
                   value: /app/data/plans.db
                 PRICES_DATABASE_FILE_PATH:
                   value: /app/data/prices.db
-                yagna_account:
+                YAGNA_ACCOUNT:
                   value: _HT*hull.config.specific.yagna_account
               envFrom:
                 orchestrator-env:

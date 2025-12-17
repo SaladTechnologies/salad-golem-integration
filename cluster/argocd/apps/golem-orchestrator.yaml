@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: golem-orchestrator
+  name: golem-orchestrator
+  namespace: argocd
+spec:
+  destination:
+    name: in-cluster
+    namespace: golem-orchestrator
+  project: default
+  source:
+    path: cluster/apps/golem-orchestrator
+    repoURL: https://github.com/SaladTechnologies/salad-golem-integration.git
+    targetRevision: HEAD
+    helm:
+      releaseName: golem-orchestrator
