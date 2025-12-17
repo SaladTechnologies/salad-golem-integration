@@ -13,9 +13,6 @@ spec:
   destination:
     name: in-cluster
     namespace: kube-system
-  info:
-    - name: SaladTechnologies/salad-golem-integration
-      value: https://github.com/SaladTechnologies/salad-golem-integration/
   project: default
   source:
     chart: kube-state-metrics

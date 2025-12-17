@@ -13,9 +13,6 @@ spec:
   destination:
     name: in-cluster
     namespace: default
-  info:
-    - name: SaladTechnologies/salad-golem-integration
-      value: https://github.com/SaladTechnologies/salad-golem-integration/
   project: default
   source:
     path: cluster/apps/namespaces
