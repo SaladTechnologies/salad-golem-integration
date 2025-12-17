@@ -73,6 +73,10 @@ hull:
                 - service
                 - run
               env:
+                MARKET_DB_CLEANUP_INTERVAL:
+                  value: "30d"
+                MARKET_MEMORY_USE_DISK:
+                  value: "true"
                 # CENTRAL_NET_HOST:
                 #   value: _HT*hull.config.specific.yagna_network
                 POLYGON_MAX_FEE_PER_GAS:
