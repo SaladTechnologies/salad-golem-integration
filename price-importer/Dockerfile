@@ -11,7 +11,7 @@ RUN mkdir -p /app/data
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install --production
+RUN npm install --omit=dev
 
 # Copy the project files
 COPY . .
