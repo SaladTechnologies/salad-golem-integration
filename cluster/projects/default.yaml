@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  name: default
+  namespace: argocd
+spec:
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  description: "Default GitOps Project"
+  destinations:
+    - name: in-cluster
+      namespace: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  sourceRepos:
+    - https://github.com/SaladTechnologies/salad-golem-integration.git
+    - https://prometheus-community.github.io/helm-charts

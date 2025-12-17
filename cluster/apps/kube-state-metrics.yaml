@@ -16,7 +16,7 @@ spec:
   info:
     - name: SaladTechnologies/salad-golem-integration
       value: https://github.com/SaladTechnologies/salad-golem-integration/
-  project: gitops-addons
+  project: default
   source:
     chart: kube-state-metrics
     repoURL: https://prometheus-community.github.io/helm-charts

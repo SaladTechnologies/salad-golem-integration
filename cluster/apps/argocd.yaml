@@ -16,7 +16,7 @@ spec:
   info:
     - name: SaladTechnologies/salad-golem-integration
       value: https://github.com/SaladTechnologies/salad-golem-integration/
-  project: gitops-addons
+  project: default
   source:
     path: cluster/charts/argocd
     repoURL: https://github.com/SaladTechnologies/salad-golem-integration.git
