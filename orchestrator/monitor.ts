@@ -9,10 +9,11 @@ import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
 import { provisionRequestor } from './requestor.js';
 import { createGolemClient } from './glm.js';
-import { k8sApi, k8sAppsApi, k8sProviderNamespace, k8sRequestorNamespace } from './k8s.js';
+import { execAndParseJson, k8sApi, k8sAppsApi, k8sProviderNamespace, k8sRequestorNamespace } from './k8s.js';
 import { getAdjustedNow } from './time.js';
 import { GolemAbortError, GolemNetwork, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
 import { provisionRelay } from './relay.js';
+import { Writable } from 'stream';
 
 // Provisioned requestors
 export let requestors: Map<string, any> = new Map();
@@ -109,6 +110,60 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
       // Use async retry to handle potential startup delays
       await retry(async () => {
         await client.connect();
+
+        // Get the payment process info
+        try {
+          logger.info(`Fetching payment process info for requestor ${requestorKey}...`);
+
+          const paymentProcessInfo = await execAndParseJson(
+            k8sRequestorNamespace,
+            `${expectedRequestorName}-0`,
+            'yagna',
+            [
+              '/home/ubuntu/.local/bin/yagna',
+              'payment',
+              'process',
+              'info',
+              '--json'
+            ]);
+
+          // Find the payment process for the configured network
+          const paymentNetwork: string = config.get('paymentNetwork');
+          // Find the network info that starts with erc20-{paymentNetwork}
+          const networkInfo = paymentProcessInfo.find((net: any) => net.platform.startsWith(`erc20-${paymentNetwork}`));
+
+          if (networkInfo) {
+            if (networkInfo.intervalSec != 1800 || networkInfo.extraPaymentTimeSec != 300) {
+              logger.warn(`Payment process for requestor ${requestorKey} is not configured with the expected intervalSec (1800) and extraPaymentTimeSec (300). Current values: intervalSec=${networkInfo.intervalSec}, extraPaymentTimeSec=${networkInfo.extraPaymentTimeSec}`);
+
+              const response = await execAndParseJson(
+                k8sRequestorNamespace,
+                `${expectedRequestorName}-0`,
+                'yagna',
+                [
+                  '/home/ubuntu/.local/bin/yagna',
+                  'payment',
+                  'process',
+                  'set',
+                  '--network',
+                  paymentNetwork,
+                  '--interval',
+                  '30m',
+                  '--payout',
+                  '5m',
+                  '--json'
+                ]);
+
+              logger.info(`Updated payment process configuration for requestor ${requestorKey}: ${JSON.stringify(response)}`);
+            }
+            else {
+              logger.info(`Payment process for requestor ${requestorKey} is correctly configured.`);
+            }
+          }
+        } catch (err) {
+          console.log(err);
+          logger.error(err, `Error fetching payment process info for requestor ${requestorKey}:`);
+        }
       }, {
         onRetry: (err, attempt) => {
           logger.warn(err, `Retrying connection to requestor API at ${apiUrl} for wallet key: ${requestorKey}. Attempt ${attempt}. Error:`);
