@@ -228,7 +228,7 @@ export async function processPlans(): Promise<void> {
 
     // Kick off the plan, staggered by 0-55 seconds to avoid the thundering herd
     logger.info(`Activating plan for node_id=${job.node_id} (plan_id=${job.node_plan_id})}`);
-    const randomDelay = 0;// Math.floor(Math.random() * 55000);
+    const randomDelay = Math.floor(Math.random() * 55000);
     const planPromise = new Promise<void>((resolve, reject) => {
       setTimeout(() => {
         executePlan(requestors.get(selectedRequestorKey), job, gpuClassMap)
