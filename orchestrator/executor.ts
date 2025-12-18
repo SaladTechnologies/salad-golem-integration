@@ -244,7 +244,7 @@ export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap
 
     remoteProcess.stdout.subscribe(async (data: string) => {
       data = data.replace(/[\r\n]+/g, ' ');
-      logger.info(`${currentJob!.node_id} stdout> ${data}`);
+
       if (data.includes('completed') || data.includes('interrupted')) {
         const endTime = Date.now();
         const actualDuration = endTime - startTime;
