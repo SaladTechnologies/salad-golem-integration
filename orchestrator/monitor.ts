@@ -88,7 +88,6 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
         await provisionRequestor(k8sApi, k8sRequestorNamespace, {
           name: expectedRequestorName,
           environment: {
-            POLYGON_GETH_ADDR: "https://1rpc.io/matic,https://polygon-mainnet.gateway.tatum.io",
             POLYGON_MAX_FEE_PER_GAS: config.get<number>('polygonMaxGasFeeGwei').toString(),
             YA_NET_RELAY_HOST: relayUrl,
             YA_NET_TYPE: 'hybrid',
