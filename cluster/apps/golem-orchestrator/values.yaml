@@ -8,7 +8,6 @@ hull:
             app.kubernetes.io/version: _HT*hull.config.specific.tag
     specific:
       matrix_api_url: https://matrix-rest-api.salad.com
-      organizations_array: '["realfake"]'
       providers_namespace: golem-providers
       requestors_namespace: golem-requestors
       secrets_timestamp: "1765954477"
@@ -157,8 +156,6 @@ hull:
                   value: _HT*hull.config.specific.matrix_api_url
                 NODES_DATABASE_FILE_PATH:
                   value: /app/data/nodes.db
-                ORGANIZATION_WHITELIST:
-                  value: _HT*hull.config.specific.organizations_array
                 PLANS_DATABASE_FILE_PATH:
                   value: /app/data/plans.db
                 PRICES_DATABASE_FILE_PATH:
