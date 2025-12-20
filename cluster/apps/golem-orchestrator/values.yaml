@@ -10,7 +10,7 @@ hull:
       matrix_api_url: https://matrix-rest-api.salad.com
       providers_namespace: golem-providers
       requestors_namespace: golem-requestors
-      secrets_timestamp: "1765954477"
+      secrets_timestamp: "1766265454"
       storage_class_name: do-block-storage
       tag: "11f661a"
       yagna_account: "0x57123711a7dc9731458fc6b06df23a7a5d871fba"
