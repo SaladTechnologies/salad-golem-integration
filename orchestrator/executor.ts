@@ -204,9 +204,9 @@ export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap
       order: {
         demand: {
           payment: {
-            // debitNotesAcceptanceTimeoutSec: 120, // 2 minutes
-            // midAgreementDebitNoteIntervalSec: 120, // 2 minutes
-            // midAgreementPaymentTimeoutSec: 1800, // 30 minutes
+            debitNotesAcceptanceTimeoutSec: 120, // 2 minutes
+            midAgreementDebitNoteIntervalSec: 1800, // 30 minutes
+            midAgreementPaymentTimeoutSec: 1800, // 30 minutes
           },
           workload: {
             runtime: {
