@@ -52,7 +52,7 @@ export async function fetchMixpanelJql() {
     const encodedParams = new URLSearchParams();
     encodedParams.set('script', jqlQuery);
     encodedParams.set('params', JSON.stringify({
-      from_date: start,
+      from_date: end,
       to_date: end,
       event_selectors: [{event: 'Workload Earning', selector: 'properties["InvoiceAmount"] > 0'}]
     }));
