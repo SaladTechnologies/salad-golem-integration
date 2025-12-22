@@ -12,7 +12,7 @@ hull:
       requestors_namespace: golem-requestors
       secrets_timestamp: "1766265454"
       storage_class_name: do-block-storage
-      tag: "9f5ce1b"
+      tag: "b9b41e2"
       yagna_account: "0x57123711a7dc9731458fc6b06df23a7a5d871fba"
       yagna_api_key: "15155534c5cc4bfe9cca9717a5e1873d"
       yagna_api_url: http://requestor-15155534c5cc4bfe9cca9717a5e1873d-0.requestor-15155534c5cc4bfe9cca9717a5e1873d.golem-requestors.svc.cluster.local:7465
