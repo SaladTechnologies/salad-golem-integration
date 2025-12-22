@@ -55,6 +55,7 @@ export async function provisionRelay(name: string) {
             {
               name: names.statefulSetName,
               image: `saladtechnologies/golem-relay:${relayTag}`,
+              imagePullPolicy: 'IfNotPresent',
               ports: [
                 {
                   containerPort: 7477,

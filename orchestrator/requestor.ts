@@ -72,6 +72,7 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
             {
               name: 'consent-writer',
               image: 'busybox:1.37',
+              imagePullPolicy: 'IfNotPresent',
               command: [
                 'sh',
                 '-c',
@@ -93,6 +94,7 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
             {
               name: 'yagna',
               image: 'saladtechnologies/golem-requestor:v0.17.6-1',
+              imagePullPolicy: 'IfNotPresent',
               args: ['service', 'run'],
               envFrom: [
                 { secretRef: { name: names.environmentName } },

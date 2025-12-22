@@ -115,7 +115,7 @@ export async function provisionNode(
         {
           name: 'golem-provider',
           image: 'saladtechnologies/golem-provider:v0.17.6-1',
-          imagePullPolicy: 'Never',
+          imagePullPolicy: 'IfNotPresent',
           args: ['run', '--no-interactive'],
           resources: {
             limits: { cpu: '2', memory: '1Gi' },
