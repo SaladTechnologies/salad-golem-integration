@@ -40,7 +40,7 @@ export async function provisionRequestors() {
   await Promise.all(promises);
 }
 
-export async function teardownRequestors() {
+export async function teardownRequestors(): Promise<number> {
   // Get the list of stateful sets in the requestor namespace
   const statefulSets = await k8sAppsApi.listNamespacedStatefulSet({ namespace: k8sProviderNamespace });
 
@@ -77,38 +77,7 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
     const publicKey = await wallet.getAddress();
 
     const requestorKey = publicKey.toLowerCase().replace('0x', '');
-
-    // Check if the relay pod already exists
     const expectedRelayName = `relay-${requestorKey}`;
-    let relayExists = false;
-
-    if (statefulSetNames.includes(expectedRelayName)) {
-      logger.info(`Relay stateful set for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
-      relayExists = true;
-    }
-
-    // Wait until relay pod is deleted if it is in the process of being deleted
-    if (relayExists) {
-      while (true) {
-        try {
-          const resp = await k8sApi.readNamespacedPod({name: `${expectedRelayName}-0`, namespace: k8sRequestorNamespace});
-          if (resp.metadata?.deletionTimestamp) {
-            logger.info(`Relay stateful set ${expectedRelayName} is being deleted. Waiting...`);
-            await new Promise(resolve => setTimeout(resolve, 5000));
-          } else {
-            break;
-          }
-        } catch (err) {
-          // If not found, break the loop
-          if (err instanceof Error && err.message.includes('404')) {
-            break;
-          } else {
-            logger.error(err, `Error checking relay stateful set ${expectedRelayName}:`);
-            await new Promise(resolve => setTimeout(resolve, 5000));
-          }
-        }
-      }
-    }
 
     // Provision new relay
     logger.info(`Provisioning relay for wallet key: ${requestorKey}`);
@@ -121,39 +90,9 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
     const relayUrl = `${expectedRelayName}-service.${k8sRequestorNamespace}.svc.cluster.local:7477`;
     logger.info(`Relay URL for wallet key ${requestorKey}: ${relayUrl}`);
 
-    // Check if requestor pod already exists
     const expectedRequestorName = `requestor-${requestorKey}`;
-    let requestorExists = false;
-
-    if (statefulSetNames.includes(expectedRequestorName)) {
-      logger.info(`Requestor stateful set for wallet key: ${requestorKey} already exists. Skipping provisioning.`);
-      requestorExists = true;
-    }
 
     if (!requestors.has(requestorKey)) {
-      // Wait until requestor pod is deleted if it is in the process of being deleted
-      if (requestorExists) {
-        while (true) {
-          try {
-            const resp = await k8sApi.readNamespacedPod({name: `${expectedRequestorName}-0`, namespace: k8sRequestorNamespace});
-            if (resp.metadata?.deletionTimestamp) {
-              logger.info(`Requestor stateful set ${expectedRequestorName} is being deleted. Waiting...`);
-              await new Promise(resolve => setTimeout(resolve, 5000));
-            } else {
-              break;
-            }
-          } catch (err) {
-            // If not found, break the loop
-            if (err instanceof Error && err.message.includes('404')) {
-              break;
-            } else {
-              logger.error(err, `Error checking requestor stateful set ${expectedRequestorName}:`);
-              await new Promise(resolve => setTimeout(resolve, 5000));
-            }
-          }
-        }
-      }
-
       // Provision new requestor
       logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
 
