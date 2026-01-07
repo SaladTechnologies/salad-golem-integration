@@ -134,7 +134,7 @@ export async function provisionRequestor(k8sApi: CoreV1Api, namespace: string, r
           securityContext: {
             fsGroup: 1000,
           },
-          terminationGracePeriodSeconds: 60,
+          terminationGracePeriodSeconds: 30,
         },
       },
       volumeClaimTemplates: [

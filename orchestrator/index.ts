@@ -1,4 +1,4 @@
-import { activePlans, processPlans, provisionRequestors, requestors } from './monitor.js';
+import { activePlans, processPlans, provisionRequestors, requestors, teardownRequestors } from './monitor.js';
 import { nodesDb, plansDb, pricesDb } from './db.js';
 import { shutdown } from './glm.js';
 import { logger } from './logger.js';
@@ -11,8 +11,8 @@ import { scheduleTask } from './helpers.js';
 process.on('SIGINT', () => shutdownHandler('SIGINT'));
 process.on('SIGTERM', () => shutdownHandler('SIGTERM'));
 
-// Provision requestors in the background
-provisionRequestors();
+// Teardown and provision requestors on startup
+teardownAndProvisionRequestors();
 
 // Schedule plan processing every minute
 let runnerInterval = setInterval(processPlans, 1000 * 60);
@@ -25,6 +25,20 @@ scheduleTask(async () => {
     logger.error(err, 'Error during unused resource reaping:');
   }
 }, 1000 * 60 * 2.5);
+
+async function teardownAndProvisionRequestors() {
+  // Teardown existing requestors on startup
+  const requestorsReaped = await teardownRequestors();
+
+  // Wait for 10 seconds to allow Kubernetes to finalize any deletions
+  if (requestorsReaped > 0) {
+    logger.info(`Waiting 10 seconds for Kubernetes to finalize deletions of ${requestorsReaped} requestors...`);
+    await new Promise(resolve => setTimeout(resolve, 10000));
+  }
+
+  // Provision requestors in the background
+  provisionRequestors();
+}
 
 async function shutdownHandler(signal: string) {
   // Clear interval

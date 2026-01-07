@@ -7,13 +7,12 @@ import { plansDb } from './db.js';
 import { getGpuClasses } from './matrix.js';
 import { executePlan } from './executor.js';
 import { deprovisionNode } from './provider.js';
-import { provisionRequestor } from './requestor.js';
+import { deprovisionRequestor, provisionRequestor } from './requestor.js';
 import { createGolemClient } from './glm.js';
 import { execAndParseJson, k8sApi, k8sAppsApi, k8sProviderNamespace, k8sRequestorNamespace } from './k8s.js';
 import { getAdjustedNow } from './time.js';
 import { GolemAbortError, GolemNetwork, GolemTimeoutError, GolemWorkError } from '@golem-sdk/golem-js';
-import { provisionRelay } from './relay.js';
-import { Writable } from 'stream';
+import { deprovisionRelay, provisionRelay } from './relay.js';
 
 // Provisioned requestors
 export let requestors: Map<string, any> = new Map();
@@ -41,6 +40,36 @@ export async function provisionRequestors() {
   await Promise.all(promises);
 }
 
+export async function teardownRequestors() {
+  // Get the list of stateful sets in the requestor namespace
+  const statefulSets = await k8sAppsApi.listNamespacedStatefulSet({ namespace: k8sProviderNamespace });
+
+  let statefulSetsReaped = 0;
+
+  for (const ss of statefulSets.items) {
+    const ssName = ss.metadata?.name;
+    // Extract UUID from stateful set name assuming format requestor-<UUID> or relay-<UUID>
+    const uuidMatch = ssName?.match(/^(requestor|relay)-(.+)$/);
+
+    if (uuidMatch) {
+      try {
+        logger.info(`Reaping stateful set: ${ssName}`);
+        if (ssName?.startsWith('requestor-')) {
+          await deprovisionRequestor(k8sApi, k8sProviderNamespace, ssName!);
+        } else if (ssName?.startsWith('relay-')) {
+          await deprovisionRelay(ssName!);
+        }
+        logger.info(`Successfully reaped stateful set: ${ssName}`);
+        statefulSetsReaped += 1;
+      } catch (err) {
+        logger.error(err, `Error reaping stateful set ${ssName}:`);
+      }
+    }
+  }
+
+  return statefulSetsReaped;
+}
+
 async function setupRequestorAndRelay(privateKey: string, statefulSetNames: string[]) {
   try {
     // Get the public key from the wallet key
@@ -49,7 +78,7 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
 
     const requestorKey = publicKey.toLowerCase().replace('0x', '');
 
-    // Check if the relay stateful set already exists
+    // Check if the relay pod already exists
     const expectedRelayName = `relay-${requestorKey}`;
     let relayExists = false;
 
@@ -58,15 +87,36 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
       relayExists = true;
     }
 
-    if (!relayExists) {
-      // Provision new relay
-      logger.info(`Provisioning relay for wallet key: ${requestorKey}`);
-      // Provision the relay in Kubernetes
-      await provisionRelay(expectedRelayName);
-
-      // Wait a moment for the relay to start
-      await new Promise(resolve => setTimeout(resolve, 2 * 1000));
+    // Wait until relay pod is deleted if it is in the process of being deleted
+    if (relayExists) {
+      while (true) {
+        try {
+          const resp = await k8sApi.readNamespacedPod({name: `${expectedRelayName}-0`, namespace: k8sRequestorNamespace});
+          if (resp.metadata?.deletionTimestamp) {
+            logger.info(`Relay stateful set ${expectedRelayName} is being deleted. Waiting...`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          } else {
+            break;
+          }
+        } catch (err) {
+          // If not found, break the loop
+          if (err instanceof Error && err.message.includes('404')) {
+            break;
+          } else {
+            logger.error(err, `Error checking relay stateful set ${expectedRelayName}:`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        }
+      }
     }
+
+    // Provision new relay
+    logger.info(`Provisioning relay for wallet key: ${requestorKey}`);
+    // Provision the relay in Kubernetes
+    await provisionRelay(expectedRelayName);
+
+    // Wait a moment for the relay to start
+    await new Promise(resolve => setTimeout(resolve, 2 * 1000));
 
     const relayUrl = `${expectedRelayName}-service.${k8sRequestorNamespace}.svc.cluster.local:7477`;
     logger.info(`Relay URL for wallet key ${requestorKey}: ${relayUrl}`);
@@ -81,24 +131,45 @@ async function setupRequestorAndRelay(privateKey: string, statefulSetNames: stri
     }
 
     if (!requestors.has(requestorKey)) {
-      if (!requestorExists) {
-        // Provision new requestor
-        logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
-
-        // Provision the requestor in Kubernetes
-        await provisionRequestor(k8sApi, k8sRequestorNamespace, {
-          name: expectedRequestorName,
-          environment: {
-            // POLYGON_GETH_ADDR: "https://polygon.drpc.org",
-            POLYGON_MAX_FEE_PER_GAS: config.get<number>('polygonMaxGasFeeGwei').toString(),
-            YA_NET_RELAY_HOST: relayUrl,
-            YA_NET_TYPE: 'hybrid',
-            YAGNA_API_URL: 'http://0.0.0.0:7465',
-            YAGNA_AUTOCONF_APPKEY: requestorKey,
-            YAGNA_AUTOCONF_ID_SECRET: privateKey.replace('0x', ''),
+      // Wait until requestor pod is deleted if it is in the process of being deleted
+      if (requestorExists) {
+        while (true) {
+          try {
+            const resp = await k8sApi.readNamespacedPod({name: `${expectedRequestorName}-0`, namespace: k8sRequestorNamespace});
+            if (resp.metadata?.deletionTimestamp) {
+              logger.info(`Requestor stateful set ${expectedRequestorName} is being deleted. Waiting...`);
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            } else {
+              break;
+            }
+          } catch (err) {
+            // If not found, break the loop
+            if (err instanceof Error && err.message.includes('404')) {
+              break;
+            } else {
+              logger.error(err, `Error checking requestor stateful set ${expectedRequestorName}:`);
+              await new Promise(resolve => setTimeout(resolve, 5000));
+            }
           }
-        });
+        }
       }
+
+      // Provision new requestor
+      logger.info(`Provisioning requestor for wallet key: ${requestorKey}`);
+
+      // Provision the requestor in Kubernetes
+      await provisionRequestor(k8sApi, k8sRequestorNamespace, {
+        name: expectedRequestorName,
+        environment: {
+          // POLYGON_GETH_ADDR: "https://polygon.drpc.org",
+          POLYGON_MAX_FEE_PER_GAS: config.get<number>('polygonMaxGasFeeGwei').toString(),
+          YA_NET_RELAY_HOST: relayUrl,
+          YA_NET_TYPE: 'hybrid',
+          YAGNA_API_URL: 'http://0.0.0.0:7465',
+          YAGNA_AUTOCONF_APPKEY: requestorKey,
+          YAGNA_AUTOCONF_ID_SECRET: privateKey.replace('0x', ''),
+        }
+      });
 
       const apiUrl = `http://${expectedRequestorName}-service.${k8sRequestorNamespace}.svc.cluster.local:7465`;
       logger.info(`Connecting to requestor API at ${apiUrl} for wallet key: ${requestorKey}`);

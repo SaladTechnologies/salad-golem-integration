@@ -75,7 +75,7 @@ export async function provisionRelay(name: string) {
               },
             },
           ],
-          terminationGracePeriodSeconds: 60,
+          terminationGracePeriodSeconds: 10,
         },
       },
     },
