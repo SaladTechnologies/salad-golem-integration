@@ -11,7 +11,9 @@ const JSON_KEYS = {
   START_AT: 0,
   STOP_AT: 1,
   INVOICE_AMOUNT: 2,
-  GPU_CLASS_ID: 5
+  GPU_CLASS_ID: 5,
+  CPU: 3,
+  RAM: 4,
 }
 
 /**
@@ -38,6 +40,8 @@ async function importPlans() {
       invoice_amount REAL,
       usd_per_hour REAL,
       gpu_class_id TEXT,
+      ram REAL,
+      cpu REAL,
       FOREIGN KEY (json_import_file_id) REFERENCES json_import_file(id)
     )
   `);
@@ -116,8 +120,12 @@ async function importPlans() {
             stop_at,
             invoice_amount,
             usd_per_hour,
-            gpu_class_id
+            gpu_class_id,
+            ram,
+            cpu
           ) VALUES (
+            ?,
+            ?,
             ?,
             ?,
             ?,
@@ -165,7 +173,9 @@ async function importPlans() {
             row.value[JSON_KEYS.STOP_AT],
             row.value[JSON_KEYS.INVOICE_AMOUNT],
             usdPerHour,
-            row.value[JSON_KEYS.GPU_CLASS_ID]
+            row.value[JSON_KEYS.GPU_CLASS_ID],
+            row.value[JSON_KEYS.RAM],
+            row.value[JSON_KEYS.CPU]
           );
 
           // Calculate job parameters
