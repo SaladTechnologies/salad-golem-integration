@@ -1,23 +1,32 @@
 import fs from 'fs/promises';
 import config from 'config';
 import { logger } from './logger.mjs';
+import { DateTime } from 'luxon';
 
 // Function to fetch data from MixPanel JQL API for the previous two days
 export async function fetchMixpanelJql() {
   // Function to get the previous n day ranges
-  function getPreviousDayRanges(n, baseDate = new Date()) {
+  function getPreviousDayRanges(n, baseDate = null) {
+    // Use Mountain Time as the base date
+    let base;
+    if (baseDate) {
+      base = DateTime.fromJSDate(baseDate, { zone: 'America/Denver' });
+    } else {
+      base = DateTime.now().setZone('America/Denver');
+    }
     const pad = x => x.toString().padStart(2, '0');
-    const formatCompact = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
-    const formatDashed = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const formatCompact = d => `${d.year}${pad(d.month)}${pad(d.day)}`;
+    const formatDashed = d => `${d.year}-${pad(d.month)}-${pad(d.day)}`;
+
+    // Print current date and time for debugging
+    logger.info(`Base date for JQL fetch: ${base.toISO()}`);
 
     // Generate n ranges, each for a single day, ending at baseDate - 1 day
     // e.g. for n=2 and baseDate=2025-11-07, get [2025-11-04 to 2025-11-05], [2025-11-05 to 2025-11-06]
     const result = [];
     for (let i = n + 1; i >= 2; i--) {
-      const start = new Date(baseDate);
-      start.setDate(baseDate.getDate() - i);
-      const end = new Date(baseDate);
-      end.setDate(baseDate.getDate() - (i - 1));
+      const start = base.minus({ days: i });
+      const end = base.minus({ days: i - 1 });
       result.push({
         filename: `${formatCompact(start)}-${formatCompact(end)}.json`,
         start: formatDashed(start),
