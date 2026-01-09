@@ -141,7 +141,7 @@ export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap
     environment: {
       NODE_NAME: `node-${initialJob.node_id}`,
       SUBNET: "public",
-      RUST_LOG: "debug",
+      //RUST_LOG: "debug",
       YA_ACCOUNT: config.get<string>("yagnaAccount"),
       YA_PAYMENT_NETWORK_GROUP: "mainnet",
       YA_NET_TYPE: "hybrid",
