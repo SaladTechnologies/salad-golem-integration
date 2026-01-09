@@ -1,3 +1,4 @@
+import timespan from 'timespan-parser';
 import { GolemNetwork, OfferProposalFilterFactory } from '@golem-sdk/golem-js';
 import { pricesDb, nodesDb } from './db.js';
 import { shutdown } from './glm.js';
@@ -191,11 +192,13 @@ export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap
   const shutdownListener = () => rentalAbortController.abort();
   shutdown.signal.addEventListener('abort', shutdownListener);
 
-  // 10 minutes in ms
-  const timeoutId = setTimeout(() => rentalAbortController.abort(), 10 * 60 * 1000);
+  // Set 10 minutes timeout for rental acquisition
+  const rentalTimeoutId = setTimeout(() => rentalAbortController.abort(), 10 * 60 * 1000);
 
   // Integrate with Golem Network to run the job
   let rental: any;
+  let jobTimeoutId: NodeJS.Timeout | null = null;
+
   try {
     const rentHours = Math.ceil((currentJob.adjusted_duration / (1000 * 60 * 60)) * 10) / 10
     logger.info(`Requesting rental for ${rentHours} hours with env per hour price: ${glmEnvPerHourPrice.toFixed(6)} GLM/hour`);
@@ -230,7 +233,12 @@ export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap
     });
 
     // Clear the timeout upon successful rental
-    clearTimeout(timeoutId);
+    clearTimeout(rentalTimeoutId);
+
+    // Set timeout for the job execution
+    const timespanParser = timespan({ unit: 'ms' });
+    const jobTimeoutBuffer = timespanParser.parse(config.get<string>('jobTimeoutBuffer'));
+    jobTimeoutId = setTimeout(() => rentalAbortController.abort(), currentJob.adjusted_duration + jobTimeoutBuffer); // add buffer from config
 
     const exe = await rental.getExeUnit();
     const remoteProcess = await exe.runAndStream(
@@ -270,7 +278,11 @@ export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap
     console.error(err);
     throw err;
   } finally {
-    clearTimeout(timeoutId);
+    // Clear timers
+    clearTimeout(rentalTimeoutId);
+    if (jobTimeoutId) clearTimeout(jobTimeoutId);
+
+    // Cleanup shutdown listener
     shutdown.signal.removeEventListener('abort', shutdownListener);
     if (rental) await rental.stopAndFinalize();
   }
