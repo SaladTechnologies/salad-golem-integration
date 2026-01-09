@@ -33,7 +33,7 @@ async function teardownAndProvisionRequestors() {
 
     // Wait for 10 seconds to allow Kubernetes to finalize any deletions
     if (requestorsReaped > 0) {
-      logger.info(`Waiting 10 seconds for Kubernetes to finalize deletions of ${requestorsReaped} requestors...`);
+      logger.info(`Waiting 10 seconds for Kubernetes to finalize deletions of ${requestorsReaped} relays/requestors...`);
       await new Promise(resolve => setTimeout(resolve, 10000));
     }
 
