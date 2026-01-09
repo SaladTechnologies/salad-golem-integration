@@ -42,7 +42,7 @@ export async function provisionRequestors() {
 
 export async function teardownRequestors(): Promise<number> {
   // Get the list of stateful sets in the requestor namespace
-  const statefulSets = await k8sAppsApi.listNamespacedStatefulSet({ namespace: k8sProviderNamespace });
+  const statefulSets = await k8sAppsApi.listNamespacedStatefulSet({ namespace: k8sRequestorNamespace });
 
   let statefulSetsReaped = 0;
 
@@ -55,7 +55,7 @@ export async function teardownRequestors(): Promise<number> {
       try {
         logger.info(`Reaping stateful set: ${ssName}`);
         if (ssName?.startsWith('requestor-')) {
-          await deprovisionRequestor(k8sApi, k8sProviderNamespace, ssName!);
+          await deprovisionRequestor(k8sApi, k8sRequestorNamespace, ssName!);
         } else if (ssName?.startsWith('relay-')) {
           await deprovisionRelay(ssName!);
         }
