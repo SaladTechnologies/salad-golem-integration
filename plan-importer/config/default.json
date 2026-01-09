@@ -4,5 +4,12 @@
   "mixPanelApiKey": "",
   "mixPanelJqlUrl": "https://mixpanel.com/api/query/jql",
   "maximumDuration": "2hr",
-  "plansDatabaseFilePath": "../data/plans.db"
+  "plansDatabaseFilePath": "../data/plans.db",
+  "postgres": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "statsdb",
+    "user": "devuser",
+    "password": "devpass"
+  }
 }

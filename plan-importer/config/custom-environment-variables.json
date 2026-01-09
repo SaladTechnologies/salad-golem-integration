@@ -1,5 +1,12 @@
 {
   "dataDirectory": "DATA_DIRECTORY",
   "mixPanelApiKey": "MIXPANEL_API_KEY",
-  "plansDatabaseFilePath": "PLANS_DATABASE_FILE_PATH"
+  "plansDatabaseFilePath": "PLANS_DATABASE_FILE_PATH",
+  "postgres": {
+    "host": "POSTGRES_HOST",
+    "port": "POSTGRES_PORT",
+    "database": "POSTGRES_DB",
+    "user": "POSTGRES_USER",
+    "password": "POSTGRES_PASSWORD"
+  }
 }
