@@ -27,17 +27,21 @@ scheduleTask(async () => {
 }, 1000 * 60 * 2.5);
 
 async function teardownAndProvisionRequestors() {
-  // Teardown existing requestors on startup
-  const requestorsReaped = await teardownRequestors();
+  try {
+    // Teardown existing requestors on startup
+    const requestorsReaped = await teardownRequestors();
 
-  // Wait for 10 seconds to allow Kubernetes to finalize any deletions
-  if (requestorsReaped > 0) {
-    logger.info(`Waiting 10 seconds for Kubernetes to finalize deletions of ${requestorsReaped} requestors...`);
-    await new Promise(resolve => setTimeout(resolve, 10000));
+    // Wait for 10 seconds to allow Kubernetes to finalize any deletions
+    if (requestorsReaped > 0) {
+      logger.info(`Waiting 10 seconds for Kubernetes to finalize deletions of ${requestorsReaped} requestors...`);
+      await new Promise(resolve => setTimeout(resolve, 10000));
+    }
+
+    // Provision requestors in the background
+    provisionRequestors();
+  } catch (err) {
+    logger.error(err, 'Error during requestor teardown/provisioning on startup:');
   }
-
-  // Provision requestors in the background
-  provisionRequestors();
 }
 
 async function shutdownHandler(signal: string) {
