@@ -59,6 +59,10 @@ try {
     $Env:DIGITALOCEAN_TOKEN = 'op://Employee/DigitalOcean API Token/password'
   }
 
+  $Env:TF_VAR_github_app_id = 'op://DevOps/GitHub App - Argo CD/GitHub app ID'
+  $Env:TF_VAR_github_app_installation_id = 'op://DevOps/GitHub App - Argo CD/GitHub app installation ID'
+  $Env:TF_VAR_github_app_private_key = 'op://DevOps/GitHub App - Argo CD/GitHub app private key'
+
   Push-Location .\infrastructure\
   try {
     terraform init
@@ -81,7 +85,7 @@ try {
   try {
     $initialPassword = kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | `
       ForEach-Object -Process { [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_)) }
-    $password = & op read "op://Yagna Experiment/ArgoCD/password"
+    $password = & op read "op://Connect - Golem Integration/ArgoCD/password"
     & argocd login localhost:8080 --insecure --name golem-integration --password $initialPassword --username admin
     & argocd account update-password --argocd-context golem-integration --current-password $initialPassword --new-password $password
     & kubectl delete secret argocd-initial-admin-secret --namespace argocd

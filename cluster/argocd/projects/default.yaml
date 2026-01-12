@@ -20,4 +20,5 @@ spec:
     - https://1password.github.io/connect-helm-charts
     - https://charts.external-secrets.io
     - https://github.com/SaladTechnologies/salad-golem-integration.git
+    - https://github.com/SaladTechnologies/salad-golem-internal.git
     - https://prometheus-community.github.io/helm-charts

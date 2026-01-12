@@ -11,9 +11,5 @@ variable "github_app_installation_id" {
 variable "github_app_private_key" {
   type        = string
   description = "The GitHub App private key used to authenticate to GitHub."
-}
-
-variable "kustomization_path" {
-  type        = string
-  description = "The path to the kustomization."
+  sensitive   = true
 }

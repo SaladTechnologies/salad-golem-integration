@@ -20,7 +20,7 @@ resource "kubernetes_namespace_v1" "argocd_ns" {
 
 ##### Argo CD Deployment #####
 
-resource "kubernetes_secret_v1" "github_repo_sec" {
+resource "kubernetes_secret_v1" "integration_github_repo_sec" {
   lifecycle {
     ignore_changes = [
       metadata[0].annotations["argocd.argoproj.io/tracking-id"],
@@ -38,8 +38,40 @@ resource "kubernetes_secret_v1" "github_repo_sec" {
   }
 
   data = {
-    name = "golem-integration-apps"
-    url  = "https://github.com/SaladTechnologies/salad-golem-integration.git"
+    githubAppID             = var.github_app_id
+    githubAppInstallationID = var.github_app_installation_id
+    githubAppPrivateKey     = var.github_app_private_key
+    name                    = "golem-integration-apps"
+    type                    = "git"
+    url                     = "https://github.com/SaladTechnologies/salad-golem-integration.git"
+  }
+  type = "Opaque"
+}
+
+resource "kubernetes_secret_v1" "internal_github_repo_sec" {
+  lifecycle {
+    ignore_changes = [
+      metadata[0].annotations["argocd.argoproj.io/tracking-id"],
+      timeouts,
+    ]
+  }
+
+  metadata {
+    labels = {
+      "app.kubernetes.io/managed-by"   = "terraform"
+      "argocd.argoproj.io/secret-type" = "repository"
+    }
+    name      = "golem-internal-github-repo"
+    namespace = kubernetes_namespace_v1.argocd_ns.metadata[0].name
+  }
+
+  data = {
+    githubAppID             = var.github_app_id
+    githubAppInstallationID = var.github_app_installation_id
+    githubAppPrivateKey     = var.github_app_private_key
+    name                    = "golem-internal-apps"
+    type                    = "git"
+    url                     = "https://github.com/SaladTechnologies/salad-golem-internal.git"
   }
   type = "Opaque"
 }
@@ -156,7 +188,8 @@ resource "kubernetes_manifest" "root_proj" {
         }
       ]
       sourceRepos = [
-        "https://github.com/SaladTechnologies/salad-golem-integration.git"
+        "https://github.com/SaladTechnologies/salad-golem-integration.git",
+        "https://github.com/SaladTechnologies/salad-golem-internal.git"
       ]
     }
   }
@@ -184,12 +217,6 @@ resource "kubernetes_manifest" "root_app" {
         name      = "in-cluster"
         namespace = kubernetes_namespace_v1.argocd_ns.metadata[0].name
       }
-      info = [
-        {
-          name  = "SaladTechnologies/salad-golem-integration"
-          value = "https://github.com/SaladTechnologies/salad-golem-integration/"
-        }
-      ]
       project = kubernetes_manifest.root_proj.manifest.metadata.name
       sources = [
         {
@@ -200,6 +227,11 @@ resource "kubernetes_manifest" "root_app" {
         {
           path           = "cluster/argocd/projects"
           repoURL        = "https://github.com/SaladTechnologies/salad-golem-integration.git"
+          targetRevision = "HEAD"
+        },
+        {
+          path           = "cluster/argocd/apps"
+          repoURL        = "https://github.com/SaladTechnologies/salad-golem-internal.git"
           targetRevision = "HEAD"
         }
       ]
