@@ -21,4 +21,5 @@ spec:
     - https://charts.external-secrets.io
     - https://github.com/SaladTechnologies/salad-golem-integration.git
     - https://github.com/SaladTechnologies/salad-golem-internal.git
+    - https://helm.runix.net
     - https://prometheus-community.github.io/helm-charts
