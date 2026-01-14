@@ -286,8 +286,10 @@ export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap
     shutdown.signal.removeEventListener('abort', shutdownListener);
 
     // Allow max 5 minutes to finalize rental
-    const finalizeTimeoutMs = 5 * 60 * 1000; // 5 minutes
-    if (rental) await rental.stopAndFinalize(finalizeTimeoutMs);
+    if (rental) {
+      const finalizeTimeoutMs = 5 * 60 * 1000; // 5 minutes
+      await rental.stopAndFinalize(finalizeTimeoutMs);
+    }
   }
 
   logger.info(`Finished job for node_id=${currentJob.node_id} (plan_id=${currentJob.node_plan_id})`);
