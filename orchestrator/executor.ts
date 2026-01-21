@@ -215,7 +215,7 @@ export async function executePlan(requestor: any, initialJob: Job, gpuClassesMap
             runtime: {
               name: "salad",
             },
-            imageTag: "golem/alpine:latest",
+            imageHash: "b7276f230e6dc2f130bc3338bcbb9fde3899ccfc5e7bb574f15e4421",
           },
         },
         market: {
